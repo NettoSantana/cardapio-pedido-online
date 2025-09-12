@@ -1,3 +1,24 @@
 ﻿:root { --space: 20px; }
 body { font-family: Arial, sans-serif; margin: 0; padding: var(--space); background:#fafafa; color:#111; }
 .container { max-width: 960px; margin: 0 auto; }
+
+/* --- Cardápio básico --- */
+.cat-title { margin-top: 28px; font-size: 20px; }
+.item-list { list-style: none; padding: 0; margin: 10px 0 0; }
+.item-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #eee; gap: 10px; }
+.item-left { max-width: 75%; }
+.item-name { font-weight: 600; }
+.item-desc { color: #555; font-size: 14px; margin-top: 2px; }
+.item-right { white-space: nowrap; font-weight: 600; }
+.item-off { opacity: 0.6; }
+'
+
+# 4) Git — commit e push
+git add -A
+
+@'
+feat(frontend): renderiza cardápio na tela (categorias + itens + preço)
+
+- index.html: adiciona container #menu
+- app.js: busca /api/menu e desenha lista por categoria
+- style.css: estilos simples para lista

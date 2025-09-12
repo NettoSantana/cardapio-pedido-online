@@ -1,6 +1,4 @@
-﻿chore: estrutura inicial do projeto (MVP WebApp)
+﻿fix(frontend): remove BOM e lixo de encoding no app.js
 
-- pastas backend, frontend, db, scripts
-- Flask básico (backend/server.py) + Procfile e requirements
-- frontend inicial (index.html, css, js)
-- .gitignore para Python/Front/OS
+- regrava arquivo em UTF-8 sem BOM
+- mantém fetch de /api/menu com mensagens de status
