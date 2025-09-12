@@ -66,3 +66,28 @@ feat(frontend): botão "Adicionar ao carrinho" + resumo (itens/total)
 - index.html: bloco #cartSummary
 - app.js: lógica mínima de carrinho (array em memória)
 - style.css: estilos para botão e resumo
+
+/* --- Finalização --- */
+.order-bar {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin: 8px 0 16px;
+}
+.order-bar input {
+  padding: 8px 10px; border: 1px solid #ddd; border-radius: 8px;
+}
+.order-msg { margin: 8px 0 12px; font-weight: 600; }
+.order-msg.ok { color: #0a7; }
+.order-msg.err { color: #c00; }
+
+/* botão primário */
+.btn-primary { background: #1a1a1a; color: #fff; }
+'
+
+# 4) Git — commit e push
+git add -A
+
+@'
+feat(frontend): botão "Finalizar Pedido" enviando carrinho para POST /api/orders
+
+- barra com mesa/nome + botão
+- envio com validação e mensagens de sucesso/erro

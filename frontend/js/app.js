@@ -1,22 +1,16 @@
 ﻿"use strict";
 
 function formataPreco(n) {
-  try {
-    return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  } catch {
-    return `R$ ${Number(n).toFixed(2)}`;
-  }
+  try { return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+  catch { return `R$ ${Number(n).toFixed(2)}`; }
 }
 
 // ===== Carrinho (memória no navegador) =====
 const cart = []; // [{id, name, price, qty}]
 function addToCart(item) {
   const idx = cart.findIndex(x => x.id === item.id);
-  if (idx >= 0) {
-    cart[idx].qty += 1;
-  } else {
-    cart.push({ id: item.id, name: item.name, price: item.price, qty: 1 });
-  }
+  if (idx >= 0) cart[idx].qty += 1;
+  else cart.push({ id: item.id, name: item.name, price: item.price, qty: 1 });
   updateCartSummary();
 }
 
@@ -34,6 +28,54 @@ function updateCartSummary() {
   if (cartTotalEl) cartTotalEl.textContent = formataPreco(total);
 }
 
+async function finalizeOrder() {
+  const msgEl = document.getElementById("orderMsg");
+  const tableCode = (document.getElementById("tableCode")?.value || "").trim();
+  const customerName = (document.getElementById("customerName")?.value || "").trim();
+
+  msgEl.className = "order-msg";
+  if (!tableCode) {
+    msgEl.classList.add("err");
+    msgEl.textContent = "Informe a mesa/quarto (ex: M01).";
+    return;
+  }
+  if (cart.length === 0) {
+    msgEl.classList.add("err");
+    msgEl.textContent = "Seu carrinho está vazio.";
+    return;
+  }
+
+  const payload = {
+    table_code: tableCode,
+    customer_name: customerName || undefined,
+    items: cart.map(it => ({ id: it.id, qty: it.qty }))
+  };
+
+  msgEl.textContent = "Enviando pedido...";
+  try {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status} - ${txt}`);
+    }
+    const data = await res.json(); // {order_id, status, total}
+    msgEl.classList.add("ok");
+    msgEl.textContent = `Pedido #${data.order_id} recebido! Total: ${formataPreco(data.total)}.`;
+
+    // limpa carrinho
+    cart.splice(0, cart.length);
+    updateCartSummary();
+  } catch (err) {
+    console.error("Falha ao enviar pedido:", err);
+    msgEl.classList.add("err");
+    msgEl.textContent = "Erro ao enviar pedido. Tente novamente.";
+  }
+}
+
 // ===== App =====
 (async function main() {
   // status
@@ -45,6 +87,9 @@ function updateCartSummary() {
     document.body.prepend(statusEl);
   }
   statusEl.textContent = "Carregando cardápio...";
+
+  // click do botão de finalizar
+  document.getElementById("btnCheckout")?.addEventListener("click", finalizeOrder);
 
   try {
     const res = await fetch("/api/menu", { headers: { "Accept": "application/json" } });
@@ -94,16 +139,12 @@ function updateCartSummary() {
           btn.type = "button";
           btn.textContent = "Adicionar";
           btn.disabled = it.available === false;
-          btn.addEventListener("click", () => {
-            addToCart({ id: it.id, name: it.name, price: Number(it.price || 0) });
-          });
+          btn.addEventListener("click", () => addToCart({ id: it.id, name: it.name, price: Number(it.price || 0) }));
 
           right.appendChild(price);
           right.appendChild(btn);
 
-          if (it.available === false) {
-            li.classList.add("item-off");
-          }
+          if (it.available === false) li.classList.add("item-off");
 
           li.appendChild(left);
           li.appendChild(right);

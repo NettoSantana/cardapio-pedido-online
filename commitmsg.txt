@@ -1,5 +1,5 @@
-﻿feat(frontend): render do cardápio (categorias + itens) e CSS básico
+﻿feat(api): cria POST /api/orders com validação e recálculo de preços
 
-- index.html: adiciona #menu
-- app.js: busca /api/menu e desenha lista
-- style.css: estilos simples da lista
+- valida items contra cardápio mock
+- calcula total no servidor
+- persiste em memória (ORDERS) e expõe GET /api/orders
