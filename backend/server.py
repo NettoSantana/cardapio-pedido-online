@@ -25,7 +25,6 @@ ADMIN_USER = os.environ.get("ADMIN_USER") or "admin"
 ADMIN_PASS = os.environ.get("ADMIN_PASS") or "changeme"
 
 def _unauthorized():
-    # retorna 401 com cabeçalho para o navegador abrir prompt
     return Response(status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'})
 
 def _parse_basic_auth():
@@ -40,7 +39,6 @@ def _parse_basic_auth():
         return None, None
 
 def require_admin(fn):
-    # decorador para proteger rotas administrativas
     from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -75,10 +73,15 @@ def save_orders(orders):
         json.dump(orders, f, ensure_ascii=False, indent=2)
     os.replace(tmp, ORDERS_FILE)
 
-def next_order_id(orders):
-    return (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
+def _is_today_iso(iso):
+    try:
+        d = datetime.fromisoformat((iso or "").replace("Z",""))
+        now = datetime.utcnow()
+        return d.date() == now.date()
+    except Exception:
+        return False
 
-# ===== Fallback de cardápio (se arquivo faltar) =====
+# ===== Fallback de cardápio =====
 FALLBACK_MENU = {
     "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto (fallback)", "open": True, "pix_key": None},
     "categories": [
@@ -149,7 +152,39 @@ def api_menu():
     menu = load_menu(slug)
     return jsonify(menu)
 
-# Admin-only
+# Histórico público da mesa (dia atual)
+@app.get("/api/my-orders")
+def my_orders_by_table():
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    table = (request.args.get("table") or "").strip()
+    if not table:
+        abort(400, "parâmetro 'table' é obrigatório")
+
+    orders = load_orders()
+    data = [o for o in orders
+            if o.get("tenant_slug") == slug
+            and (o.get("table_code") or "").strip().lower() == table.lower()
+            and _is_today_iso(o.get("created_at"))]
+
+    def _key(o):
+        try:
+            return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
+        except Exception:
+            return datetime.min
+    data.sort(key=_key, reverse=True)
+
+    slim = []
+    for o in data:
+        slim.append({
+            "id": o.get("id"),
+            "created_at": o.get("created_at"),
+            "status": o.get("status"),
+            "total": o.get("total"),
+            "items": [{"name": it.get("name"), "qty": it.get("qty"), "line_total": it.get("line_total")} for it in (o.get("items") or [])]
+        })
+    return jsonify(slim)
+
+# Admin-only: listar pedidos
 @app.get("/api/orders")
 @require_admin
 def list_orders():
@@ -159,7 +194,7 @@ def list_orders():
         orders = [o for o in orders if o.get("tenant_slug") == slug]
     return jsonify(orders)
 
-# Público (clientes criam pedido)
+# Público: criar pedido
 @app.post("/api/orders")
 def create_order():
     slug = get_slug_from_request()
@@ -200,7 +235,7 @@ def create_order():
         })
 
     orders = load_orders()
-    order_id = next_order_id(orders)
+    order_id = (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
     order = {
         "id": order_id,
         "tenant_slug": slug,
@@ -212,53 +247,12 @@ def create_order():
         "service_fee": 0.0,
         "total": total,
         "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-    }
-        "closed": False,
+        "closed": False,  # <— importante para “Fechar conta”
     }
     orders.append(order)
     save_orders(orders)
     return jsonify({"order_id": order_id, "status": order["status"], "total": order["total"]}), 201
 
-@app.get("/api/my-orders")
-def my_orders_by_table():
-    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
-    table = (request.args.get("table") or "").strip()
-    if not table:
-        abort(400, "parâmetro 'table' é obrigatório")
-
-    orders = load_orders()
-    # filtra por tenant e mesa
-    data = [o for o in orders if o.get("tenant_slug") == slug and (o.get("table_code") or "").strip().lower() == table.lower()]
-
-    # (opcional) só de hoje - por padrão SIM (pode mudar depois)
-    def _is_today_iso(iso):
-        try:
-            d = datetime.fromisoformat((iso or "").replace("Z",""))
-            now = datetime.utcnow()
-            return d.date() == now.date()
-        except Exception:
-            return False
-    data = [o for o in data if _is_today_iso(o.get("created_at"))]
-
-    # ordena por data desc
-    def _key(o):
-        try:
-            return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
-        except Exception:
-            return datetime.min
-    data.sort(key=_key, reverse=True)
-
-    # resposta “enxuta”
-    slim = []
-    for o in data:
-        slim.append({
-            "id": o.get("id"),
-            "created_at": o.get("created_at"),
-            "status": o.get("status"),
-            "total": o.get("total"),
-            "items": [{"name": it.get("name"), "qty": it.get("qty"), "line_total": it.get("line_total")} for it in (o.get("items") or [])]
-        })
-    return jsonify(slim)
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -282,5 +276,3 @@ def update_order(order_id: int):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
-
-
