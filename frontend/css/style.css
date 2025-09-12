@@ -122,3 +122,286 @@ feat(frontend): token de mesa via ?t= preenche e trava o campo Mesa/Quarto
 git add frontend\js\app.js frontend\css\style.css
 @'
 chore(ui): quando ?t= está presente, escondo o input de Mesa e mostro badge de mesa detectada
+
+/* admin upgrades */
+.time { font-size: 12px; color:#777; }
+.btn-row { display:flex; gap:6px; flex-wrap:wrap; }
+.btn-outline { background:#fff; color:#111; border:1px solid #111; }
+.switch { display:inline-flex; align-items:center; gap:6px; font-size:14px; }
+.switch input { transform: scale(1.2); }
+@media print {
+  body { margin:0; padding:0; }
+}
+'
+
+# 2) Atualiza admin.html: toggle som + dica impressão
+(Get-Content frontend\admin.html) `
+  -replace '(</div>\s*</div>\s*<table>)', '<div class="switch"><input type="checkbox" id="soundToggle"><label for="soundToggle">Som de novos pedidos</label></div>$1' `
+| Set-Content -Encoding UTF8 frontend\admin.html
+
+# 3) Atualiza admin.js com tempo, voltar status, imprimir, som
+@'
+"use strict";
+
+function formataPreco(n) {
+  try { return Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+  catch { return `R$ ${Number(n).toFixed(2)}`; }
+}
+function getSlug() {
+  const u = new URL(location.href);
+  return u.searchParams.get("slug") || "bar-do-netto";
+}
+function isTodayIsoZ(iso) {
+  if (!iso) return false;
+  const d = new Date(iso); if (isNaN(d)) return false;
+  const now = new Date();
+  return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth() && d.getDate()===now.getDate();
+}
+function timeAgo(iso) {
+  if (!iso) return "-";
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime())/1000|0);
+  if (s < 60) return `${s}s`;
+  const m = (s/60)|0; if (m < 60) return `${m}m`;
+  const h = (m/60)|0; const rm = m%60;
+  return `${h}h ${rm}m`;
+}
+
+let lastRefreshAt = null;
+let rawOrders = [];
+let ui = { status: "all", scope: "today", q: "" };
+let lastSeenMaxId = 0;
+let soundOn = false;
+let audioPing = null;
+
+function ensureAudio() {
+  if (audioPing) return audioPing;
+  // beep simples (440Hz) em base64 (500ms)
+  const src = "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAACABAAZGF0YTwAAAABAQEBAQEBAQEBAQEBAgICAwMDAwMDAwQEBAUFBQYGBgcHBwgICAkJCgoKCwsLCwsLCwsKCgoJCQgICAf///8AAP//AAD///8AAP//AAD///8AAP//AAAA";
+  audioPing = new Audio(src);
+  audioPing.volume = 0.6;
+  return audioPing;
+}
+
+async function fetchOrders() {
+  const res = await fetch(`/api/orders?slug=${encodeURIComponent(getSlug())}`, { headers: { "Accept":"application/json" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+function applyFilters() {
+  let list = [...rawOrders];
+  if (ui.scope === "today") list = list.filter(o => isTodayIsoZ(o.created_at));
+  if (ui.status !== "all") list = list.filter(o => (o.status||"").toLowerCase() === ui.status);
+  const q = ui.q.trim().toLowerCase();
+  if (q) {
+    list = list.filter(o => {
+      const idMatch = ("#"+o.id).toLowerCase().includes(q) || String(o.id).includes(q);
+      const mesaMatch = (o.table_code||"").toLowerCase().includes(q);
+      const itemsMatch = Array.isArray(o.items) && o.items.some(it =>
+        (it.name||"").toLowerCase().includes(q)
+      );
+      return idMatch || mesaMatch || itemsMatch;
+    });
+  }
+  list.sort((a,b) => {
+    const da = new Date(a.created_at||0).getTime();
+    const db = new Date(b.created_at||0).getTime();
+    if (!isNaN(da) && !isNaN(db) && db!==da) return db-da;
+    return (b.id||0) - (a.id||0);
+  });
+  return list;
+}
+
+function nextStatus(cur) {
+  const flow = ["received", "preparing", "delivering", "done"];
+  const idx = flow.indexOf(cur);
+  return idx >= 0 && idx < flow.length - 1 ? flow[idx+1] : cur;
+}
+function prevStatus(cur) {
+  const flow = ["received", "preparing", "delivering", "done"];
+  const idx = flow.indexOf(cur);
+  return idx > 0 ? flow[idx-1] : cur;
+}
+
+async function changeStatus(orderId, newStatus) {
+  try {
+    const res = await fetch(`/api/orders/${orderId}?slug=${encodeURIComponent(getSlug())}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await res.json();
+    await loadOrders();
+  } catch (err) {
+    alert("Erro ao atualizar status");
+    console.error(err);
+  }
+}
+
+function printTicket(o) {
+  const w = window.open("", "_blank", "width=360,height=600");
+  const itemsHtml = (o.items||[]).map(it => `<tr><td>${it.qty}× ${it.name}</td><td style="text-align:right">${formataPreco(it.line_total||0)}</td></tr>`).join("");
+  const html = `
+    <html><head><meta charset="utf-8"><title>Comanda #${o.id}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:12px}
+      h2{margin:0 0 8px}
+      table{width:100%;border-collapse:collapse}
+      td{padding:4px 0;border-bottom:1px dashed #ddd}
+      .muted{color:#666;font-size:12px}
+      .tot{font-weight:bold}
+    </style></head>
+    <body>
+      <h2>Comanda #${o.id}</h2>
+      <div class="muted">${o.created_at||""} • Mesa: ${o.table_code||"-"}</div>
+      <hr/>
+      <table>${itemsHtml}</table>
+      <p class="tot">Total: ${formataPreco(o.total||0)}</p>
+      <script>window.print();<\/script>
+    </body></html>`;
+  w.document.write(html);
+  w.document.close();
+}
+
+function render(list) {
+  const tbody = document.getElementById("ordersTbody");
+  tbody.innerHTML = "";
+
+  if (!list.length) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 6; td.className = "muted";
+    td.textContent = "Nenhum pedido encontrado.";
+    tr.appendChild(td); tbody.appendChild(tr); return;
+  }
+
+  for (const o of list) {
+    const tr = document.createElement("tr");
+
+    const tdId = document.createElement("td");
+    tdId.innerHTML = `#${o.id}<div class="time">${timeAgo(o.created_at)} atrás</div>`;
+
+    const tdTable = document.createElement("td");
+    tdTable.textContent = o.table_code || "-";
+
+    const tdItems = document.createElement("td");
+    if (Array.isArray(o.items) && o.items.length) {
+      const ul = document.createElement("ul");
+      ul.style.margin = "0"; ul.style.paddingLeft = "16px";
+      for (const it of o.items) {
+        const li = document.createElement("li");
+        const note = it.note ? ` — "${it.note}"` : "";
+        li.textContent = `${it.qty}× ${it.name}${note}`;
+        ul.appendChild(li);
+      }
+      tdItems.appendChild(ul);
+    } else tdItems.textContent = "-";
+
+    const tdTotal = document.createElement("td");
+    tdTotal.textContent = formataPreco(o.total ?? 0);
+
+    const tdStatus = document.createElement("td");
+    tdStatus.innerHTML = `<span class="pill">${o.status}</span>`;
+
+    const tdActions = document.createElement("td");
+    const row = document.createElement("div");
+    row.className = "btn-row";
+
+    const prevBtn = document.createElement("button");
+    prevBtn.textContent = "Voltar";
+    prevBtn.className = "btn btn-sm btn-outline";
+    prevBtn.onclick = () => changeStatus(o.id, prevStatus(o.status));
+
+    const nextBtn = document.createElement("button");
+    nextBtn.textContent = "Avançar";
+    nextBtn.className = "btn btn-sm";
+    nextBtn.onclick = () => changeStatus(o.id, nextStatus(o.status));
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancelar";
+    cancelBtn.className = "btn btn-sm btn-outline";
+    cancelBtn.onclick = () => changeStatus(o.id, "cancelled");
+
+    const printBtn = document.createElement("button");
+    printBtn.textContent = "Imprimir";
+    printBtn.className = "btn btn-sm btn-outline";
+    printBtn.onclick = () => printTicket(o);
+
+    row.appendChild(prevBtn);
+    row.appendChild(nextBtn);
+    row.appendChild(cancelBtn);
+    row.appendChild(printBtn);
+    tdActions.appendChild(row);
+
+    tr.appendChild(tdId);
+    tr.appendChild(tdTable);
+    tr.appendChild(tdItems);
+    tr.appendChild(tdTotal);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  }
+}
+
+async function loadOrders() {
+  const statusEl = document.getElementById("status");
+  statusEl.textContent = "Carregando pedidos...";
+  try {
+    const data = await fetchOrders();
+    // detectar novos (id maior do que já vimos)
+    const maxId = data.reduce((m,o)=>Math.max(m, o.id||0), 0);
+    const isNew = maxId > lastSeenMaxId;
+    rawOrders = data;
+    const list = applyFilters();
+    render(list);
+    lastRefreshAt = new Date();
+    statusEl.textContent = `Atualizado às ${lastRefreshAt.toLocaleTimeString("pt-BR")} (slug: ${getSlug()})`;
+
+    if (isNew && soundOn) {
+      try { ensureAudio().play(); } catch(e) { /* ignore */ }
+    }
+    lastSeenMaxId = Math.max(lastSeenMaxId, maxId);
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Erro ao carregar pedidos.";
+  }
+}
+
+// === eventos da UI existentes + novos ===
+function bindUI() {
+  document.getElementById("btnReload")?.addEventListener("click", loadOrders);
+  document.getElementById("dateScope")?.addEventListener("change", (e)=>{ ui.scope = e.target.value; render(applyFilters()); });
+
+  const searchBox = document.getElementById("searchBox");
+  if (searchBox) {
+    let t=null;
+    searchBox.addEventListener("input",(e)=>{
+      clearTimeout(t);
+      t=setTimeout(()=>{
+        ui.q = e.target.value || "";
+        render(applyFilters());
+      },200);
+    });
+  }
+
+  const tabs = document.getElementById("tabs");
+  tabs?.addEventListener("click",(e)=>{
+    const el = e.target.closest(".tab"); if(!el) return;
+    [...tabs.querySelectorAll(".tab")].forEach(t=>t.classList.remove("active"));
+    el.classList.add("active");
+    ui.status = el.dataset.status || "all";
+    render(applyFilters());
+  });
+
+  const sound = document.getElementById("soundToggle");
+  if (sound) {
+    sound.checked = false;
+    sound.addEventListener("change", ()=>{ soundOn = sound.checked; if (soundOn) ensureAudio(); });
+  }
+}
+
+// init
+bindUI();
+loadOrders();
+setInterval(loadOrders, 5000);
