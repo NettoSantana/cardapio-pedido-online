@@ -5,14 +5,12 @@ function formataPreco(n) {
   catch { return `R$ ${Number(n).toFixed(2)}`; }
 }
 
-// slug atual ( /c/<slug> → <slug> ; senão, default)
 function currentSlug() {
   const p = location.pathname.replace(/^\/+|\/+$/g, "");
   if (p.startsWith("c/")) return p.split("/")[1] || "bar-do-netto";
   return "bar-do-netto";
 }
 
-// ===== Carrinho (memória no navegador) =====
 const cart = [];
 function addToCart(item) {
   const idx = cart.findIndex(x => x.id === item.id);
@@ -43,24 +41,17 @@ async function finalizeOrder() {
   if (!tableCode) { msgEl.classList.add("err"); msgEl.textContent = "Informe a mesa/quarto (ex: M01)."; return; }
   if (cart.length === 0) { msgEl.classList.add("err"); msgEl.textContent = "Seu carrinho está vazio."; return; }
 
-  const payload = {
-    table_code: tableCode,
-    customer_name: customerName || undefined,
-    items: cart.map(it => ({ id: it.id, qty: it.qty }))
-  };
+  const payload = { table_code: tableCode, customer_name: customerName || undefined, items: cart.map(it => ({ id: it.id, qty: it.qty })) };
 
   msgEl.textContent = "Enviando pedido...";
   try {
     const res = await fetch(`/api/orders?slug=${encodeURIComponent(slug)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
     });
     if (!res.ok) { const txt = await res.text(); throw new Error(`HTTP ${res.status} - ${txt}`); }
     const data = await res.json();
     msgEl.classList.add("ok");
     msgEl.textContent = `Pedido #${data.order_id} recebido! Total: ${formataPreco(data.total)}.`;
-
     cart.splice(0, cart.length);
     updateCartSummary();
   } catch (err) {
@@ -80,7 +71,10 @@ async function finalizeOrder() {
   const slug = currentSlug();
   try {
     const res = await fetch(`/api/menu?slug=${encodeURIComponent(slug)}`, { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`HTTP ${res.status} - ${txt}`);
+    }
     const data = await res.json();
     console.log("[API] /api/menu →", data);
 
@@ -139,9 +133,9 @@ async function finalizeOrder() {
     });
 
     updateCartSummary();
-    statusEl.textContent = `Cardápio carregado (${slug}).`;
+    statusEl.textContent = `Cardápio carregado (slug: ${slug}).`;
   } catch (err) {
     console.error("Falha ao carregar /api/menu:", err);
-    statusEl.textContent = "Erro ao carregar cardápio. Tente atualizar a página.";
+    statusEl.textContent = `Erro ao carregar cardápio (slug: ${slug}). Veja o console para detalhes.`;
   }
 })();

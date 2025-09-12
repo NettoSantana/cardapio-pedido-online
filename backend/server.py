@@ -3,7 +3,6 @@ import json
 from datetime import datetime
 from flask import Flask, send_from_directory, jsonify, request, abort
 
-# Caminhos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 DB_DIR = os.path.join(BASE_DIR, "db")
@@ -17,7 +16,6 @@ app = Flask(
     static_url_path=""
 )
 
-# ===== Persistência pedidos (JSON) =====
 def _ensure_db():
     os.makedirs(DB_DIR, exist_ok=True)
     if not os.path.exists(ORDERS_FILE):
@@ -43,20 +41,46 @@ def save_orders(orders):
 def next_order_id(orders):
     return (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
 
-# ===== Menu por tenant (arquivo) =====
+# ===== Fallback de menu (caso arquivo falhe) =====
+FALLBACK_MENU = {
+    "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto", "open": True, "pix_key": None},
+    "categories": [
+        {
+            "id": 1, "name": "Bebidas", "order": 1, "active": True,
+            "items": [
+                {"id": 101, "name": "Água Mineral 500ml", "desc": "Sem gás", "price": 4.0, "photo_url": None, "available": True},
+                {"id": 102, "name": "Refrigerante Lata", "desc": "Coca, Guaraná ou Sprite", "price": 7.0, "photo_url": None, "available": True},
+                {"id": 103, "name": "Cerveja Long Neck", "desc": "Pilsen gelada", "price": 12.0, "photo_url": None, "available": True}
+            ]
+        },
+        {
+            "id": 2, "name": "Porções", "order": 2, "active": True,
+            "items": [
+                {"id": 201, "name": "Batata Frita", "desc": "300g crocante", "price": 24.0, "photo_url": None, "available": True},
+                {"id": 202, "name": "Frango à Passarinho", "desc": "400g temperado", "price": 38.0, "photo_url": None, "available": True}
+            ]
+        }
+    ]
+}
+
 def load_menu(slug: str):
     path = os.path.join(DATA_DIR, slug, "menu.json")
-    if not os.path.exists(path):
-        abort(404, f"menu não encontrado para slug '{slug}'")
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return data
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data
+    except Exception as e:
+        # fallback seguro
+        app.logger.warning(f"[menu] fallback usado para slug={slug}. Erro: {e}")
+        fb = json.loads(json.dumps(FALLBACK_MENU))  # copia
+        fb["tenant"]["slug"] = slug or DEFAULT_SLUG
+        fb["tenant"]["name"] = fb["tenant"]["name"] + " (fallback)"
+        return fb
 
 def item_index(menu):
     return {it["id"]: it for cat in (menu.get("categories") or []) for it in (cat.get("items") or [])}
 
 def get_slug_from_request():
-    # 1) query ?slug=  2) se URL começa com /c/<slug>, usa esse  3) default
     slug = (request.args.get("slug") or "").strip()
     if slug:
         return slug
@@ -65,12 +89,10 @@ def get_slug_from_request():
         return p.split("/", 1)[1]
     return DEFAULT_SLUG
 
-# ===== Health =====
 @app.get("/health")
 def health():
     return jsonify(status="ok")
 
-# ===== Frontend =====
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
@@ -83,7 +105,6 @@ def client_slug(slug: str):
 def admin():
     return send_from_directory(FRONTEND_DIR, "admin.html")
 
-# ===== API =====
 @app.get("/api/menu")
 def api_menu():
     slug = get_slug_from_request()
@@ -116,7 +137,6 @@ def create_order():
     if not isinstance(items, list) or len(items) == 0:
         abort(400, "items deve ser lista não vazia")
 
-    # valida e reprecifica
     order_items, total = [], 0.0
     for raw in items:
         try:
@@ -160,7 +180,7 @@ VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
 def update_order(order_id: int):
-    slug = request.args.get("slug")  # opcional: restringe tenant
+    slug = request.args.get("slug")
     if not request.is_json:
         abort(400, "JSON esperado")
     payload = request.get_json(silent=True) or {}
