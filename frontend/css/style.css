@@ -91,3 +91,34 @@ feat(frontend): botão "Finalizar Pedido" enviando carrinho para POST /api/order
 
 - barra com mesa/nome + botão
 - envio com validação e mensagens de sucesso/erro
+
+/* token de mesa detectado */
+.input-locked { background: #f5f5f5; color: #333; }
+.token-info { margin: 6px 0 12px; font-size: 14px; color: #0a7; font-weight: 600; }
+'
+
+# 3) Git — commit e push
+git add frontend\js\app.js frontend\css\style.css
+
+@'
+feat(frontend): token de mesa via ?t= preenche e trava o campo Mesa/Quarto
+
+- lê ?t= da URL e prioriza no POST /api/orders
+- estiliza input bloqueado e mostra aviso de mesa detectada
+
+/* quando mesa vem por token, escondemos o input e mostramos info */
+.token-info {
+  display: inline-block;
+  background: #eafaf2;
+  border: 1px solid #c6f0d8;
+  color: #0a7;
+  padding: 6px 10px;
+  border-radius: 12px;
+  margin: 6px 0 12px;
+  font-weight: 600;
+}
+'
+
+git add frontend\js\app.js frontend\css\style.css
+@'
+chore(ui): quando ?t= está presente, escondo o input de Mesa e mostro badge de mesa detectada

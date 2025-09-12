@@ -80,7 +80,7 @@ async function finalizeOrder() {
   const statusEl = document.getElementById("status");
   if (token && input) {
     input.value = token;
-    input.disabled = true;
+    input.disabled = true; input.style.display = "none";
     input.classList.add("input-locked");
     if (statusEl) {
       const info = document.createElement("div");
