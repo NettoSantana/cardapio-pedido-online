@@ -5,12 +5,21 @@ function formataPreco(n) {
   catch { return `R$ ${Number(n).toFixed(2)}`; }
 }
 
+// slug atual ( /c/<slug> → <slug> ; senão, default)
 function currentSlug() {
   const p = location.pathname.replace(/^\/+|\/+$/g, "");
   if (p.startsWith("c/")) return p.split("/")[1] || "bar-do-netto";
   return "bar-do-netto";
 }
 
+// token de mesa da querystring ?t=M01
+function currentTableToken() {
+  const u = new URL(location.href);
+  const t = (u.searchParams.get("t") || "").trim();
+  return t || null;
+}
+
+// ===== Carrinho (memória no navegador) =====
 const cart = [];
 function addToCart(item) {
   const idx = cart.findIndex(x => x.id === item.id);
@@ -34,7 +43,11 @@ function updateCartSummary() {
 async function finalizeOrder() {
   const slug = currentSlug();
   const msgEl = document.getElementById("orderMsg");
-  const tableCode = (document.getElementById("tableCode")?.value || "").trim();
+
+  // prioriza token ?t= se existir
+  const token = currentTableToken();
+  const tableInput = document.getElementById("tableCode");
+  const tableCode = (token || tableInput?.value || "").trim();
   const customerName = (document.getElementById("customerName")?.value || "").trim();
 
   msgEl.className = "order-msg";
@@ -61,6 +74,24 @@ async function finalizeOrder() {
   }
 }
 
+(function prefillTableFromToken() {
+  const token = currentTableToken();
+  const input = document.getElementById("tableCode");
+  const statusEl = document.getElementById("status");
+  if (token && input) {
+    input.value = token;
+    input.disabled = true;
+    input.classList.add("input-locked");
+    if (statusEl) {
+      const info = document.createElement("div");
+      info.className = "token-info";
+      info.textContent = `Mesa/Quarto detectado: ${token}`;
+      statusEl.insertAdjacentElement("afterend", info);
+    }
+  }
+})();
+
+// ===== App =====
 (async function main() {
   let statusEl = document.getElementById("status");
   if (!statusEl) { statusEl = document.createElement("div"); statusEl.id = "status"; statusEl.style.margin = "10px 0"; document.body.prepend(statusEl); }
@@ -71,10 +102,7 @@ async function finalizeOrder() {
   const slug = currentSlug();
   try {
     const res = await fetch(`/api/menu?slug=${encodeURIComponent(slug)}`, { headers: { "Accept": "application/json" } });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`HTTP ${res.status} - ${txt}`);
-    }
+    if (!res.ok) { const txt = await res.text(); throw new Error(`HTTP ${res.status} - ${txt}`); }
     const data = await res.json();
     console.log("[API] /api/menu →", data);
 
