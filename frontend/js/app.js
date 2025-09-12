@@ -167,3 +167,5 @@ async function finalizeOrder() {
     statusEl.textContent = `Erro ao carregar cardápio (slug: ${slug}). Veja o console para detalhes.`;
   }
 })();
+
+// build=20250912143438
