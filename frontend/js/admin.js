@@ -13,7 +13,7 @@ async function loadOrders() {
   try {
     const res = await fetch("/api/orders", { headers: { "Accept": "application/json" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const orders = await res.json(); // lista
+    const orders = await res.json();
 
     tbody.innerHTML = "";
 
@@ -31,7 +31,6 @@ async function loadOrders() {
 
         const tdId = document.createElement("td");
         tdId.textContent = `#${o.id}`;
-        tdId.className = "mono";
 
         const tdTable = document.createElement("td");
         tdTable.textContent = o.table_code || "-";
@@ -47,29 +46,32 @@ async function loadOrders() {
             ul.appendChild(li);
           }
           tdItems.appendChild(ul);
-        } else {
-          tdItems.textContent = "-";
         }
 
         const tdTotal = document.createElement("td");
-        tdTotal.textContent = formataPreco(o.total ?? o.subtotal ?? 0);
-        tdTotal.className = "mono";
+        tdTotal.textContent = formataPreco(o.total ?? 0);
 
         const tdStatus = document.createElement("td");
-        const pill = document.createElement("span");
-        pill.className = "pill";
-        pill.textContent = o.status || "received";
-        tdStatus.appendChild(pill);
+        tdStatus.innerHTML = `<span class="pill">${o.status}</span>`;
 
-        const tdCreated = document.createElement("td");
-        tdCreated.textContent = o.created_at || "-";
+        const tdActions = document.createElement("td");
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent = "Avançar";
+        nextBtn.className = "btn btn-sm";
+        nextBtn.onclick = () => changeStatus(o.id, nextStatus(o.status));
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Cancelar";
+        cancelBtn.className = "btn btn-sm";
+        cancelBtn.onclick = () => changeStatus(o.id, "cancelled");
+        tdActions.appendChild(nextBtn);
+        tdActions.appendChild(cancelBtn);
 
         tr.appendChild(tdId);
         tr.appendChild(tdTable);
         tr.appendChild(tdItems);
         tr.appendChild(tdTotal);
         tr.appendChild(tdStatus);
-        tr.appendChild(tdCreated);
+        tr.appendChild(tdActions);
         tbody.appendChild(tr);
       }
     }
@@ -78,6 +80,28 @@ async function loadOrders() {
   } catch (err) {
     console.error("Falha ao carregar pedidos:", err);
     statusEl.textContent = "Erro ao carregar pedidos.";
+  }
+}
+
+function nextStatus(cur) {
+  const flow = ["received", "preparing", "delivering", "done"];
+  const idx = flow.indexOf(cur);
+  return idx >= 0 && idx < flow.length - 1 ? flow[idx+1] : cur;
+}
+
+async function changeStatus(orderId, newStatus) {
+  try {
+    const res = await fetch(`/api/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await res.json();
+    loadOrders();
+  } catch (err) {
+    alert("Erro ao atualizar status");
+    console.error(err);
   }
 }
 

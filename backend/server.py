@@ -2,18 +2,15 @@
 import itertools
 from flask import Flask, send_from_directory, jsonify, request, abort
 
-# Caminhos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
-# App Flask serve o frontend estático (um serviço só no Railway)
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
-    static_url_path=""  # expõe /css, /js, /img direto na raiz
+    static_url_path=""
 )
 
-# ===== Mock de dados (MVP) =====
 MENU = {
     "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto", "open": True, "pix_key": None},
     "categories": [
@@ -35,19 +32,14 @@ MENU = {
     ],
 }
 
-# Índice rápido de itens por id para validação/repreço
 ITEM_INDEX = {it["id"]: it for cat in MENU["categories"] for it in cat["items"]}
-
-# “banco” em memória (MVP)
 ORDERS = []
 ORDER_ID_SEQ = itertools.count(1)
 
-# ===== Health =====
 @app.get("/health")
 def health():
     return jsonify(status="ok")
 
-# ===== Frontend =====
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
@@ -60,7 +52,6 @@ def client_slug(slug: str):
 def admin():
     return send_from_directory(FRONTEND_DIR, "admin.html")
 
-# ===== API =====
 @app.get("/api/menu")
 def api_menu():
     return jsonify(MENU)
@@ -134,5 +125,24 @@ def create_order():
         "total": order["total"],
     }), 201
 
+# ===== PATCH para mudar status =====
+VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
+
+@app.patch("/api/orders/<int:order_id>")
+def update_order(order_id: int):
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    payload = request.get_json(silent=True) or {}
+    new_status = (payload.get("status") or "").strip().lower()
+    if new_status not in VALID_STATUSES:
+        abort(400, f"status inválido: {new_status}")
+
+    order = next((o for o in ORDERS if o["id"] == order_id), None)
+    if not order:
+        abort(404, "pedido não encontrado")
+
+    order["status"] = new_status
+    return jsonify(order)
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
