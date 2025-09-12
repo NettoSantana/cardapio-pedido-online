@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Codes - Mesas (M01–M05)</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 24px; }
+    h1 { margin: 0 0 16px; }
+    .desc { color:#555; margin-bottom: 18px; }
+    .qrs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+    .qr { border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+    .qr h3 { margin: 8px 0 8px; font-size: 16px; }
+    canvas { display:block; margin:auto; }
+    .url { word-break: break-all; font-size: 12px; margin-top: 8px; }
+    .url a { text-decoration: none; color: #0366d6; }
+    @media print {
+      a { color: black; text-decoration: none; }
+      .desc { display: none; }
+      .qr { break-inside: avoid; }
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <h1>QR Codes — Mesas (M01–M05)</h1>
+  <p class="desc">Cada QR aponta para <code>/c/bar-do-netto?t=...</code>. Confira o link abaixo de cada código.</p>
+
+  <div class="qrs" id="grid"></div>
+
+  <script>
+    const BASE = "https://web-production-3bfe.up.railway.app/c/bar-do-netto?t=";
+    const MESAS = ["M01","M02","M03","M04","M05"];
+
+    const grid = document.getElementById("grid");
+    MESAS.forEach(id => {
+      const url = BASE + encodeURIComponent(id);
+
+      const wrap = document.createElement("div");
+      wrap.className = "qr";
+
+      const h3 = document.createElement("h3");
+      h3.textContent = "Mesa " + id;
+
+      const box = document.createElement("div");
+      box.id = "qr_" + id;
+
+      const urlP = document.createElement("p");
+      urlP.className = "url";
+      const a = document.createElement("a");
+      a.href = url;
+      a.textContent = url;
+      a.target = "_blank";
+      urlP.appendChild(a);
+
+      wrap.appendChild(h3);
+      wrap.appendChild(box);
+      wrap.appendChild(urlP);
+      grid.appendChild(wrap);
+
+      new QRCode(box, { text: url, width: 200, height: 200 });
+    });
+  </script>
+</body>
+</html>
