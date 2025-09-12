@@ -1,16 +1,22 @@
 ﻿import os
-import itertools
+import json
+from datetime import datetime
 from flask import Flask, send_from_directory, jsonify, request, abort
 
+# Caminhos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+DB_DIR = os.path.join(BASE_DIR, "db")
+ORDERS_FILE = os.path.join(DB_DIR, "orders.json")
 
+# App Flask serve o frontend estático (um serviço só no Railway)
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
-    static_url_path=""
+    static_url_path=""  # expõe /css, /js, /img direto na raiz
 )
 
+# ===== Mock de dados (MVP) =====
 MENU = {
     "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto", "open": True, "pix_key": None},
     "categories": [
@@ -32,14 +38,43 @@ MENU = {
     ],
 }
 
-ITEM_INDEX = {it["id"]: it for cat in MENU["categories"] for it in cat["items"]}
-ORDERS = []
-ORDER_ID_SEQ = itertools.count(1)
+# ===== Utilidades de persistência (JSON) =====
+def _ensure_db():
+    os.makedirs(DB_DIR, exist_ok=True)
+    if not os.path.exists(ORDERS_FILE):
+        with open(ORDERS_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f, ensure_ascii=False)
 
+def load_orders():
+    _ensure_db()
+    try:
+        with open(ORDERS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+    except Exception:
+        return []
+
+def save_orders(orders):
+    _ensure_db()
+    tmp = ORDERS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(orders, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, ORDERS_FILE)
+
+def next_order_id(orders):
+    return (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
+
+# Índice rápido de itens por id para validação/repreço
+ITEM_INDEX = {it["id"]: it for cat in MENU["categories"] for it in cat["items"]}
+
+# ===== Health =====
 @app.get("/health")
 def health():
     return jsonify(status="ok")
 
+# ===== Frontend =====
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
@@ -52,13 +87,15 @@ def client_slug(slug: str):
 def admin():
     return send_from_directory(FRONTEND_DIR, "admin.html")
 
+# ===== API =====
 @app.get("/api/menu")
 def api_menu():
     return jsonify(MENU)
 
 @app.get("/api/orders")
 def list_orders():
-    return jsonify(ORDERS)
+    orders = load_orders()
+    return jsonify(orders)
 
 @app.post("/api/orders")
 def create_order():
@@ -75,6 +112,7 @@ def create_order():
     if not isinstance(items, list) or len(items) == 0:
         abort(400, "items deve ser lista não vazia")
 
+    # valida e reprecifica
     order_items = []
     total = 0.0
     for raw in items:
@@ -105,7 +143,9 @@ def create_order():
             "line_total": line_total,
         })
 
-    order_id = next(ORDER_ID_SEQ)
+    # carrega, adiciona e salva
+    orders = load_orders()
+    order_id = next_order_id(orders)
     order = {
         "id": order_id,
         "tenant_slug": MENU["tenant"]["slug"],
@@ -116,8 +156,10 @@ def create_order():
         "subtotal": total,
         "service_fee": 0.0,
         "total": total,
+        "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
-    ORDERS.append(order)
+    orders.append(order)
+    save_orders(orders)
 
     return jsonify({
         "order_id": order_id,
@@ -125,7 +167,6 @@ def create_order():
         "total": order["total"],
     }), 201
 
-# ===== PATCH para mudar status =====
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -137,12 +178,15 @@ def update_order(order_id: int):
     if new_status not in VALID_STATUSES:
         abort(400, f"status inválido: {new_status}")
 
-    order = next((o for o in ORDERS if o["id"] == order_id), None)
-    if not order:
+    orders = load_orders()
+    idx = next((i for i, o in enumerate(orders) if o.get("id") == order_id), None)
+    if idx is None:
         abort(404, "pedido não encontrado")
 
-    order["status"] = new_status
-    return jsonify(order)
-    
+    orders[idx]["status"] = new_status
+    save_orders(orders)
+    return jsonify(orders[idx])
+
 if __name__ == "__main__":
+    # Execução local opcional; no Railway usamos o Procfile + waitress.
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
