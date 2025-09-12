@@ -169,7 +169,7 @@ async function finalizeOrder() {
 })();
 
 // build=20250912143438
-# --- HISTÓRICO DA MESA (cliente) ---
+// --- HISTÓRICO DA MESA (cliente) ---
 function currentTableToken() {
   const u = new URL(location.href);
   return (u.searchParams.get("t") || "").trim() || null;
