@@ -1,5 +1,5 @@
-﻿feat(api): cria POST /api/orders com validação e recálculo de preços
+﻿feat(api): persistência em JSON (db/orders.json) + created_at
 
-- valida items contra cardápio mock
-- calcula total no servidor
-- persiste em memória (ORDERS) e expõe GET /api/orders
+- /api/orders (GET/POST/PATCH) agora lê/grava em arquivo
+- id sequencial calculado do arquivo
+- created_at em UTC (ISO 8601)

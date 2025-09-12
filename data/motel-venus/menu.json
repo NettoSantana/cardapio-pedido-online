@@ -1,0 +1,19 @@
+﻿{
+  "tenant": { "slug": "motel-venus", "name": "Motel Vênus", "open": true, "pix_key": null },
+  "categories": [
+    {
+      "id": 1, "name": "Bebidas", "order": 1, "active": true,
+      "items": [
+        { "id": 1101, "name": "Espumante Brut", "desc": "Garrafa 750ml", "price": 89.0, "photo_url": null, "available": true },
+        { "id": 1102, "name": "Suco de Laranja", "desc": "Natural 300ml", "price": 12.0, "photo_url": null, "available": true }
+      ]
+    },
+    {
+      "id": 2, "name": "Pratos", "order": 2, "active": true,
+      "items": [
+        { "id": 1201, "name": "Risoto de Camarão", "desc": "Serve 1 pessoa", "price": 58.0, "photo_url": null, "available": true },
+        { "id": 1202, "name": "Cheeseburguer Duplo", "desc": "Com fritas", "price": 34.0, "photo_url": null, "available": true }
+      ]
+    }
+  ]
+}

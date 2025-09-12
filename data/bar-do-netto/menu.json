@@ -1,0 +1,20 @@
+﻿{
+  "tenant": { "slug": "bar-do-netto", "name": "Bar do Netto", "open": true, "pix_key": null },
+  "categories": [
+    {
+      "id": 1, "name": "Bebidas", "order": 1, "active": true,
+      "items": [
+        { "id": 101, "name": "Água Mineral 500ml", "desc": "Sem gás", "price": 4.0, "photo_url": null, "available": true },
+        { "id": 102, "name": "Refrigerante Lata", "desc": "Coca, Guaraná ou Sprite", "price": 7.0, "photo_url": null, "available": true },
+        { "id": 103, "name": "Cerveja Long Neck", "desc": "Pilsen gelada", "price": 12.0, "photo_url": null, "available": true }
+      ]
+    },
+    {
+      "id": 2, "name": "Porções", "order": 2, "active": true,
+      "items": [
+        { "id": 201, "name": "Batata Frita", "desc": "300g crocante", "price": 24.0, "photo_url": null, "available": true },
+        { "id": 202, "name": "Frango à Passarinho", "desc": "400g temperado", "price": 38.0, "photo_url": null, "available": true }
+      ]
+    }
+  ]
+}

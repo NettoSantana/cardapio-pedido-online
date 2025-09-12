@@ -5,6 +5,11 @@ function formataPreco(n) {
   catch { return `R$ ${Number(n).toFixed(2)}`; }
 }
 
+function getSlug() {
+  const u = new URL(location.href);
+  return u.searchParams.get("slug") || "bar-do-netto";
+}
+
 let lastRefreshAt = null;
 
 async function loadOrders() {
@@ -13,7 +18,7 @@ async function loadOrders() {
   statusEl.textContent = "Carregando pedidos...";
 
   try {
-    const res = await fetch("/api/orders", { headers: { "Accept": "application/json" } });
+    const res = await fetch(`/api/orders?slug=${encodeURIComponent(getSlug())}`, { headers: { "Accept": "application/json" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const orders = await res.json();
 
@@ -81,7 +86,7 @@ async function loadOrders() {
     }
 
     lastRefreshAt = new Date();
-    statusEl.textContent = `Atualizado às ${lastRefreshAt.toLocaleTimeString("pt-BR")}`;
+    statusEl.textContent = `Atualizado às ${lastRefreshAt.toLocaleTimeString("pt-BR")} (slug: ${getSlug()})`;
   } catch (err) {
     console.error("Falha ao carregar pedidos:", err);
     statusEl.textContent = "Erro ao carregar pedidos.";
@@ -96,14 +101,14 @@ function nextStatus(cur) {
 
 async function changeStatus(orderId, newStatus) {
   try {
-    const res = await fetch(`/api/orders/${orderId}`, {
+    const res = await fetch(`/api/orders/${orderId}?slug=${encodeURIComponent(getSlug())}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus })
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await res.json();
-    await loadOrders(); // atualiza imediatamente após ação
+    await loadOrders();
   } catch (err) {
     alert("Erro ao atualizar status");
     console.error(err);
@@ -111,9 +116,5 @@ async function changeStatus(orderId, newStatus) {
 }
 
 document.getElementById("btnReload")?.addEventListener("click", loadOrders);
-
-// primeiro load
 loadOrders();
-
-// polling a cada 5s
 setInterval(loadOrders, 5000);
