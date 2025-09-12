@@ -54,8 +54,11 @@ def index():
 
 @app.get("/c/<slug>")
 def client_slug(slug: str):
-    # MVP: entrega o mesmo index.html para SPA
     return send_from_directory(FRONTEND_DIR, "index.html")
+
+@app.get("/admin")
+def admin():
+    return send_from_directory(FRONTEND_DIR, "admin.html")
 
 # ===== API =====
 @app.get("/api/menu")
@@ -64,19 +67,10 @@ def api_menu():
 
 @app.get("/api/orders")
 def list_orders():
-    # simples para inspeção (sem paginação/autenticação no MVP)
     return jsonify(ORDERS)
 
 @app.post("/api/orders")
 def create_order():
-    """
-    Espera JSON:
-    {
-      "table_code": "M01",
-      "customer_name": "Netto",     (opcional)
-      "items": [ {"id":101, "qty":2, "note":"sem gelo?"}, ... ]
-    }
-    """
     if not request.is_json:
         abort(400, "JSON esperado")
 
@@ -90,7 +84,6 @@ def create_order():
     if not isinstance(items, list) or len(items) == 0:
         abort(400, "items deve ser lista não vazia")
 
-    # valida e reprecifica
     order_items = []
     total = 0.0
     for raw in items:
@@ -127,11 +120,11 @@ def create_order():
         "tenant_slug": MENU["tenant"]["slug"],
         "table_code": table_code,
         "customer_name": customer_name or None,
-        "status": "received",  # received -> preparing -> delivering -> done
+        "status": "received",
         "items": order_items,
         "subtotal": total,
-        "service_fee": 0.0,    # placeholder
-        "total": total,        # subtotal + taxas (MVP)
+        "service_fee": 0.0,
+        "total": total,
     }
     ORDERS.append(order)
 
@@ -142,5 +135,4 @@ def create_order():
     }), 201
 
 if __name__ == "__main__":
-    # Execução local opcional; no Railway usamos o Procfile + waitress.
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
