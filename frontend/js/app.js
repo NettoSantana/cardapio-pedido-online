@@ -211,3 +211,60 @@ async function loadHistory() {
     box.innerHTML = "<div class='hist-empty'>Falha ao carregar histórico.</div>";
   }
 }
+/** Garante que os botões de ação existam (Solicitar + Histórico) */
+(function ensureHistoryUI(){
+  let checkoutBtn = document.getElementById("btnCheckout");
+
+  // cria/garante container de ações
+  let actions = document.querySelector(".actions");
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.className = "actions";
+    const menu = document.getElementById("menu");
+    if (menu && menu.parentElement) {
+      menu.parentElement.insertBefore(actions, menu);
+    } else {
+      document.querySelector("main.container")?.prepend(actions);
+    }
+  }
+
+  // se não existir o botão de solicitar, cria um
+  if (!checkoutBtn) {
+    checkoutBtn = document.createElement("button");
+    checkoutBtn.id = "btnCheckout";
+    checkoutBtn.className = "btn";
+    checkoutBtn.type = "button";
+    checkoutBtn.textContent = "Solicitar Pedido";
+    actions.appendChild(checkoutBtn);
+    checkoutBtn.addEventListener("click", finalizeOrder);
+  } else {
+    checkoutBtn.textContent = "Solicitar Pedido";
+    checkoutBtn.classList.add("btn");
+  }
+
+  // cria o botão de histórico se não existir
+  let histBtn = document.getElementById("btnHistory");
+  if (!histBtn) {
+    histBtn = document.createElement("button");
+    histBtn.id = "btnHistory";
+    histBtn.className = "btn btn-outline";
+    histBtn.type = "button";
+    histBtn.textContent = "Histórico";
+    actions.appendChild(histBtn);
+    histBtn.addEventListener("click", loadHistory);
+  }
+
+  // garante container do histórico
+  let historyBox = document.getElementById("history");
+  if (!historyBox) {
+    historyBox = document.createElement("div");
+    historyBox.id = "history";
+    historyBox.className = "history";
+    actions.insertAdjacentElement("afterend", historyBox);
+  }
+
+  // se a mesa veio por token, já carrega o histórico automático
+  if (currentTableToken && currentTableToken()) {
+    setTimeout(loadHistory, 200);
+  }
+})();

@@ -444,3 +444,8 @@ feat(cliente): trocar "Finalizar Pedido" por "Solicitar Pedido" e adicionar "His
 
 - backend: GET /api/my-orders?slug=&table= (público) retorna pedidos da mesa (hoje)
 - frontend: botão "Histórico" e listagem com tempo, itens e total
+/* botões padrão (cliente) */
+.btn { padding:10px 14px; border:0; border-radius:8px; background:#111; color:#fff; cursor:pointer; }
+.btn-outline { background:#fff; color:#111; border:1px solid #111; }
+.btn + .btn { margin-left:8px; }
+.actions { margin: 14px 0; display:flex; flex-wrap:wrap; gap:8px; }
