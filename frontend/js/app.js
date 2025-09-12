@@ -1,8 +1,6 @@
-﻿@'
 "use strict";
 
 (async function main() {
-  // pequeno status na página
   let statusEl = document.getElementById("status");
   if (!statusEl) {
     statusEl = document.createElement("div");
@@ -14,7 +12,7 @@
 
   try {
     const res = await fetch("/api/menu", { headers: { "Accept": "application/json" } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(HTTP );
     const data = await res.json();
 
     console.log("[API] /api/menu →", data);
@@ -24,16 +22,3 @@
     statusEl.textContent = "Erro ao carregar cardápio. Tente atualizar a página.";
   }
 })();
-'@ | Set-Content -Encoding UTF8 frontend\js\app.js
-
-git add frontend\js\app.js
-
-@'
-fix(frontend): limpa app.js (remove artefatos de colagem) e mantém fetch /api/menu
-
-- substitui conteúdo com IIFE assíncrona estável
-- evita '@''/''@' e caracteres estranhos
-'@ | Set-Content commitmsg.txt -Encoding UTF8
-
-git commit -F commitmsg.txt
-git push origin main
