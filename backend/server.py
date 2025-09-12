@@ -1,8 +1,10 @@
 ﻿import os
 import json
+import base64
 from datetime import datetime
-from flask import Flask, send_from_directory, jsonify, request, abort
+from flask import Flask, send_from_directory, jsonify, request, abort, Response
 
+# Caminhos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 DB_DIR = os.path.join(BASE_DIR, "db")
@@ -16,6 +18,41 @@ app = Flask(
     static_url_path=""
 )
 
+# ===========================
+# Auth (HTTP Basic)
+# ===========================
+ADMIN_USER = os.environ.get("ADMIN_USER") or "admin"
+ADMIN_PASS = os.environ.get("ADMIN_PASS") or "changeme"
+
+def _unauthorized():
+    # retorna 401 com cabeçalho para o navegador abrir prompt
+    return Response(status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'})
+
+def _parse_basic_auth():
+    h = request.headers.get("Authorization", "")
+    if not h.lower().startswith("basic "):
+        return None, None
+    try:
+        raw = base64.b64decode(h.split(" ", 1)[1]).decode("utf-8")
+        user, pwd = raw.split(":", 1)
+        return user, pwd
+    except Exception:
+        return None, None
+
+def require_admin(fn):
+    # decorador para proteger rotas administrativas
+    from functools import wraps
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user, pwd = _parse_basic_auth()
+        if user == ADMIN_USER and pwd == ADMIN_PASS:
+            return fn(*args, **kwargs)
+        return _unauthorized()
+    return wrapper
+
+# ===========================
+# Persistência pedidos (JSON)
+# ===========================
 def _ensure_db():
     os.makedirs(DB_DIR, exist_ok=True)
     if not os.path.exists(ORDERS_FILE):
@@ -41,9 +78,9 @@ def save_orders(orders):
 def next_order_id(orders):
     return (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
 
-# ===== Fallback de menu (caso arquivo falhe) =====
+# ===== Fallback de cardápio (se arquivo faltar) =====
 FALLBACK_MENU = {
-    "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto", "open": True, "pix_key": None},
+    "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto (fallback)", "open": True, "pix_key": None},
     "categories": [
         {
             "id": 1, "name": "Bebidas", "order": 1, "active": True,
@@ -67,14 +104,11 @@ def load_menu(slug: str):
     path = os.path.join(DATA_DIR, slug, "menu.json")
     try:
         with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data
+            return json.load(f)
     except Exception as e:
-        # fallback seguro
         app.logger.warning(f"[menu] fallback usado para slug={slug}. Erro: {e}")
-        fb = json.loads(json.dumps(FALLBACK_MENU))  # copia
+        fb = json.loads(json.dumps(FALLBACK_MENU))
         fb["tenant"]["slug"] = slug or DEFAULT_SLUG
-        fb["tenant"]["name"] = fb["tenant"]["name"] + " (fallback)"
         return fb
 
 def item_index(menu):
@@ -89,10 +123,12 @@ def get_slug_from_request():
         return p.split("/", 1)[1]
     return DEFAULT_SLUG
 
+# ===== Health =====
 @app.get("/health")
 def health():
     return jsonify(status="ok")
 
+# ===== Frontend =====
 @app.get("/")
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
@@ -102,16 +138,20 @@ def client_slug(slug: str):
     return send_from_directory(FRONTEND_DIR, "index.html")
 
 @app.get("/admin")
+@require_admin
 def admin():
     return send_from_directory(FRONTEND_DIR, "admin.html")
 
+# ===== API =====
 @app.get("/api/menu")
 def api_menu():
     slug = get_slug_from_request()
     menu = load_menu(slug)
     return jsonify(menu)
 
+# Admin-only
 @app.get("/api/orders")
+@require_admin
 def list_orders():
     slug = request.args.get("slug")
     orders = load_orders()
@@ -119,6 +159,7 @@ def list_orders():
         orders = [o for o in orders if o.get("tenant_slug") == slug]
     return jsonify(orders)
 
+# Público (clientes criam pedido)
 @app.post("/api/orders")
 def create_order():
     slug = get_slug_from_request()
@@ -179,6 +220,7 @@ def create_order():
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
+@require_admin
 def update_order(order_id: int):
     slug = request.args.get("slug")
     if not request.is_json:
