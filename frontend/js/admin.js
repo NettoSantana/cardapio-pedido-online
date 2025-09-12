@@ -5,6 +5,8 @@ function formataPreco(n) {
   catch { return `R$ ${Number(n).toFixed(2)}`; }
 }
 
+let lastRefreshAt = null;
+
 async function loadOrders() {
   const statusEl = document.getElementById("status");
   const tbody = document.getElementById("ordersTbody");
@@ -46,6 +48,8 @@ async function loadOrders() {
             ul.appendChild(li);
           }
           tdItems.appendChild(ul);
+        } else {
+          tdItems.textContent = "-";
         }
 
         const tdTotal = document.createElement("td");
@@ -76,7 +80,8 @@ async function loadOrders() {
       }
     }
 
-    statusEl.textContent = "Pronto.";
+    lastRefreshAt = new Date();
+    statusEl.textContent = `Atualizado às ${lastRefreshAt.toLocaleTimeString("pt-BR")}`;
   } catch (err) {
     console.error("Falha ao carregar pedidos:", err);
     statusEl.textContent = "Erro ao carregar pedidos.";
@@ -98,7 +103,7 @@ async function changeStatus(orderId, newStatus) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await res.json();
-    loadOrders();
+    await loadOrders(); // atualiza imediatamente após ação
   } catch (err) {
     alert("Erro ao atualizar status");
     console.error(err);
@@ -106,4 +111,9 @@ async function changeStatus(orderId, newStatus) {
 }
 
 document.getElementById("btnReload")?.addEventListener("click", loadOrders);
+
+// primeiro load
 loadOrders();
+
+// polling a cada 5s
+setInterval(loadOrders, 5000);
