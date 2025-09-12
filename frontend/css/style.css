@@ -405,3 +405,42 @@ function bindUI() {
 bindUI();
 loadOrders();
 setInterval(loadOrders, 5000);
+
+/* histórico da mesa */
+.history { margin-top: 24px; border-top: 1px solid #eee; padding-top: 16px; }
+.hist-loading, .hist-empty { color:#666; font-size:14px; }
+.hist-list { list-style:none; padding:0; margin:10px 0; }
+.hist-line { padding:6px 0; border-bottom:1px dashed #eee; }
+.hist-id { font-weight:700; margin-right:6px; }
+.hist-time { color:#888; margin-right:6px; }
+'
+
+# 4) FRONTEND — criar botão "Histórico" ao lado do botão principal, sem quebrar layout
+# Inserimos via JS para não mexer demais no HTML
+Add-Content -Encoding UTF8 frontend\js\app.js @'
+
+(function injectHistoryButton(){
+  const btn = document.getElementById("btnCheckout");
+  if (!btn) return;
+  btn.textContent = "Solicitar Pedido"; // troca rótulo
+  const hist = document.createElement("button");
+  hist.type = "button";
+  hist.className = "btn";
+  hist.style.marginLeft = "8px";
+  hist.textContent = "Histórico";
+  hist.addEventListener("click", loadHistory);
+  btn.insertAdjacentElement("afterend", hist);
+
+  // se a mesa vier por token, já carrega histórico automaticamente
+  const tok = (new URL(location.href)).searchParams.get("t");
+  if (tok) { setTimeout(loadHistory, 200); }
+})();
+'
+
+# 5) Commit e push (gatilha deploy)
+git add backend\server.py frontend\index.html frontend\js\app.js frontend\css\style.css
+@'
+feat(cliente): trocar "Finalizar Pedido" por "Solicitar Pedido" e adicionar "Histórico da Mesa"
+
+- backend: GET /api/my-orders?slug=&table= (público) retorna pedidos da mesa (hoje)
+- frontend: botão "Histórico" e listagem com tempo, itens e total

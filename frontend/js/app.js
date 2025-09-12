@@ -169,3 +169,45 @@ async function finalizeOrder() {
 })();
 
 // build=20250912143438
+# --- HISTÓRICO DA MESA (cliente) ---
+function currentTableToken() {
+  const u = new URL(location.href);
+  return (u.searchParams.get("t") || "").trim() || null;
+}
+function timeAgo(iso) {
+  if (!iso) return "-";
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime())/1000|0);
+  if (s < 60) return `${s}s`;
+  const m = (s/60)|0; if (m < 60) return `${m}m`;
+  const h = (m/60)|0; const rm = m%60; return `${h}h ${rm}m`;
+}
+async function loadHistory() {
+  const slug = (function(){const p=location.pathname.replace(/^\/+|\/+$/g,"");return p.startsWith("c/")?p.split("/")[1]:"bar-do-netto";})();
+  const token = currentTableToken() || (document.getElementById("tableCode")?.value || "").trim();
+  const box = document.getElementById("history");
+  if (!box) return;
+  if (!token) { box.innerHTML = '<div class="hist-empty">Informe a mesa para ver o histórico.</div>'; return; }
+
+  box.innerHTML = "<div class='hist-loading'>Carregando histórico…</div>";
+  try {
+    const res = await fetch(`/api/my-orders?slug=${encodeURIComponent(slug)}&table=${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json(); // lista
+    if (!Array.isArray(data) || data.length===0) {
+      box.innerHTML = "<div class='hist-empty'>Sem pedidos desta mesa hoje.</div>";
+      return;
+    }
+    const parts = [];
+    parts.push(`<h2>Histórico da Mesa ${token}</h2>`);
+    parts.push("<ul class='hist-list'>");
+    for (const o of data) {
+      const itens = (o.items||[]).map(it=>`${it.qty}× ${it.name}`).join(", ");
+      parts.push(`<li><div class='hist-line'><span class='hist-id'>#${o.id}</span> <span class='hist-time'>${timeAgo(o.created_at)} atrás</span> — <span class='hist-items'>${itens}</span> — <strong>${(o.total||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</strong> — <em>${o.status}</em></div></li>`);
+    }
+    parts.push("</ul>");
+    box.innerHTML = parts.join("");
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = "<div class='hist-empty'>Falha ao carregar histórico.</div>";
+  }
+}

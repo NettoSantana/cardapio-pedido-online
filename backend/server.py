@@ -217,6 +217,46 @@ def create_order():
     save_orders(orders)
     return jsonify({"order_id": order_id, "status": order["status"], "total": order["total"]}), 201
 
+@app.get("/api/my-orders")
+def my_orders_by_table():
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    table = (request.args.get("table") or "").strip()
+    if not table:
+        abort(400, "parâmetro 'table' é obrigatório")
+
+    orders = load_orders()
+    # filtra por tenant e mesa
+    data = [o for o in orders if o.get("tenant_slug") == slug and (o.get("table_code") or "").strip().lower() == table.lower()]
+
+    # (opcional) só de hoje - por padrão SIM (pode mudar depois)
+    def _is_today_iso(iso):
+        try:
+            d = datetime.fromisoformat((iso or "").replace("Z",""))
+            now = datetime.utcnow()
+            return d.date() == now.date()
+        except Exception:
+            return False
+    data = [o for o in data if _is_today_iso(o.get("created_at"))]
+
+    # ordena por data desc
+    def _key(o):
+        try:
+            return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
+        except Exception:
+            return datetime.min
+    data.sort(key=_key, reverse=True)
+
+    # resposta “enxuta”
+    slim = []
+    for o in data:
+        slim.append({
+            "id": o.get("id"),
+            "created_at": o.get("created_at"),
+            "status": o.get("status"),
+            "total": o.get("total"),
+            "items": [{"name": it.get("name"), "qty": it.get("qty"), "line_total": it.get("line_total")} for it in (o.get("items") or [])]
+        })
+    return jsonify(slim)
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -240,3 +280,4 @@ def update_order(order_id: int):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
