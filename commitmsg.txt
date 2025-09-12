@@ -1,4 +1,5 @@
-﻿fix(frontend): remove BOM e lixo de encoding no app.js
+﻿feat(frontend): render do cardápio (categorias + itens) e CSS básico
 
-- regrava arquivo em UTF-8 sem BOM
-- mantém fetch de /api/menu com mensagens de status
+- index.html: adiciona #menu
+- app.js: busca /api/menu e desenha lista
+- style.css: estilos simples da lista

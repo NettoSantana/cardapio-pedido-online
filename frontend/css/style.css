@@ -22,3 +22,47 @@ feat(frontend): renderiza cardápio na tela (categorias + itens + preço)
 - index.html: adiciona container #menu
 - app.js: busca /api/menu e desenha lista por categoria
 - style.css: estilos simples para lista
+
+/* --- Carrinho --- */
+.cart-summary {
+  background: #fff;
+  border: 1px solid #eee;
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* --- Botões --- */
+.btn {
+  appearance: none;
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.btn-add {
+  background: #111;
+  color: #fff;
+  margin-top: 6px;
+}
+.btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+  color: #fff;
+}
+
+/* preço */
+.item-price { text-align: right; margin-bottom: 6px; }
+'
+
+# 4) Git — commit e push
+git add -A
+
+@'
+feat(frontend): botão "Adicionar ao carrinho" + resumo (itens/total)
+
+- index.html: bloco #cartSummary
+- app.js: lógica mínima de carrinho (array em memória)
+- style.css: estilos para botão e resumo
