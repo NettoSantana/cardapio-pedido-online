@@ -1,0 +1,23 @@
+﻿body {
+    font-family: Arial, sans-serif;
+
+# entrar na raiz do projeto (caso não esteja)
+cd C:\Users\vlula\cardapio-pedido-online
+
+# inicializar git se ainda não tiver
+git init
+
+# adicionar remoto (troque a URL pela do seu repo)
+git remote add origin https://github.com/SEU_USUARIO/cardapio-pedido-online.git
+
+# adicionar todos os arquivos
+git add -A
+
+# criar mensagem de commit
+@'
+chore: estrutura inicial do projeto
+
+- pastas backend, frontend, db, scripts
+- backend/server.py com Flask básico
+- requirements.txt e Procfile para deploy
+- frontend com index.html, css e js iniciais
