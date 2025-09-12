@@ -213,6 +213,8 @@ def create_order():
         "total": total,
         "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
     }
+        "closed": False,
+    }
     orders.append(order)
     save_orders(orders)
     return jsonify({"order_id": order_id, "status": order["status"], "total": order["total"]}), 201
@@ -280,4 +282,5 @@ def update_order(order_id: int):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
 
