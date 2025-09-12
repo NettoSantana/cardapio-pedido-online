@@ -449,3 +449,23 @@ feat(cliente): trocar "Finalizar Pedido" por "Solicitar Pedido" e adicionar "His
 .btn-outline { background:#fff; color:#111; border:1px solid #111; }
 .btn + .btn { margin-left:8px; }
 .actions { margin: 14px 0; display:flex; flex-wrap:wrap; gap:8px; }
+/* resumo de mesas */
+.tabs-summary { margin: 18px 0; }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
+.card { border:1px solid #eee; border-radius:10px; padding:12px; background:#fff; }
+.card h3 { margin:0 0 8px; }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; }
+.badge.open { background:#ffe; border:1px solid #ddc; }
+.badge.closed { background:#eef7ef; border:1px solid #cfe6d2; }
+.card .row { display:flex; justify-content:space-between; margin:6px 0; }
+.card .actions { margin-top:8px; }
+/* resumo de mesas (admin) */
+.tabs-summary { margin: 18px 0; }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
+.card { border:1px solid #eee; border-radius:10px; padding:12px; background:#fff; }
+.card h3 { margin:0 0 8px; }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; }
+.badge.open { background:#ffe; border:1px solid #ddc; }
+.badge.closed { background:#eef7ef; border:1px solid #cfe6d2; }
+.card .row { display:flex; justify-content:space-between; margin:6px 0; }
+.card .actions { margin-top:8px; }
