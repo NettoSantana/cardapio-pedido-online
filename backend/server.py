@@ -253,6 +253,23 @@ def create_order():
     save_orders(orders)
     return jsonify({"order_id": order_id, "status": order["status"], "total": order["total"]}), 201
 
+@app.get("/api/tabs/summary")
+@require_admin
+def tabs_summary():
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    orders = [o for o in load_orders() if o.get("tenant_slug") == slug and _is_today_iso(o.get("created_at"))]
+
+    tables = {}
+    for o in orders:
+        mesa = (o.get("table_code") or "-").strip()
+        t = tables.setdefault(mesa, {"table": mesa, "total": 0.0, "count": 0, "closed": True})
+        t["total"] += float(o.get("total") or 0)
+        t["count"] += 1
+        if not o.get("closed", False):
+            t["closed"] = False
+
+    result = sorted(tables.values(), key=lambda x: x["table"])
+    return jsonify(result)
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -276,3 +293,31 @@ def update_order(order_id: int):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
+@app.post("/api/tabs/close")
+@require_admin
+def tabs_close():
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    data = request.get_json(silent=True) or {}
+    table = (data.get("table") or "").strip()
+    if not table:
+        abort(400, "campo 'table' é obrigatório")
+
+    orders = load_orders()
+    total = 0.0
+    affected = []
+    for o in orders:
+        if o.get("tenant_slug") == slug and _is_today_iso(o.get("created_at")) and (o.get("table_code") or "").strip().lower() == table.lower():
+            total += float(o.get("total") or 0)
+            affected.append(o.get("id"))
+            o["closed"] = True
+
+    save_orders(orders)
+    return jsonify({
+        "table": table,
+        "slug": slug,
+        "closed": True,
+        "affected_ids": affected,
+        "orders_count": len(affected),
+        "total": total
+    })
