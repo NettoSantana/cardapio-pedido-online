@@ -502,3 +502,12 @@ async function renderTabsSummary() {
     grid.appendChild(card);
   }
 }
+/* Sanitiza duplicatas da seção "Mesas de hoje" (mantém só a primeira) */
+(function removeTabsSummaryDuplicates(){
+  try {
+    const sections = Array.from(document.querySelectorAll(".tabs-summary"));
+    if (sections.length > 1) {
+      sections.slice(1).forEach(s => s.parentNode && s.parentNode.removeChild(s));
+    }
+  } catch (e) { console.warn("tabs-summary cleanup:", e); }
+})();
