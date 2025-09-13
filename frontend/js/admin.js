@@ -511,3 +511,12 @@ async function renderTabsSummary() {
     }
   } catch (e) { console.warn("tabs-summary cleanup:", e); }
 })();
+(function bindExportButtons(){
+  try {
+    const today = document.getElementById("btnExportToday");
+    const all = document.getElementById("btnExportAll");
+    const slug = getSlug();
+    if (today) today.addEventListener("click", ()=> window.open(`/api/orders/export.csv?slug=${encodeURIComponent(slug)}&scope=today`, "_blank"));
+    if (all) all.addEventListener("click", ()=> window.open(`/api/orders/export.csv?slug=${encodeURIComponent(slug)}&scope=all`, "_blank"));
+  } catch(e) { console.warn("export buttons:", e); }
+})();

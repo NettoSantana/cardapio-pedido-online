@@ -54,8 +54,12 @@
 
       <input id="searchBox" class="inp" placeholder="Buscar (mesa M01, #123, item…)" />
       <button id="btnReload" class="btn">Atualizar</button>
-      <div class="switch"><input type="checkbox" id="soundToggle"><label for="soundToggle"> Som de novos pedidos</label></div>
-    </div>
+        
+
+  <div class="toolbar">
+    <button id="btnExportToday" class="btn btn-outline">Exportar CSV (Hoje)</button>
+    <button id="btnExportAll" class="btn btn-outline">Exportar CSV (Todos)</button>
+  </div>
 
     <!-- ============ APENAS 1 BLOCO DE MESAS DE HOJE ============ -->
     <section class="tabs-summary">
@@ -84,6 +88,7 @@
     <p class="hint">Dica: use <b>?slug=</b> na URL para filtrar o tenant. Ex.: <code>/admin?slug=bar-do-netto</code></p>
   </main>
 
-  <script src="/js/admin.js?v=20250913080547"></script>
+  <script src="/js/admin.js?v=20250913081021"></script>
 </body>
 </html>
+
