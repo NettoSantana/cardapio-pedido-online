@@ -270,6 +270,61 @@ def tabs_summary():
 
     result = sorted(tables.values(), key=lambda x: x["table"])
     return jsonify(result)
+@app.get("/api/orders/export.csv")
+@require_admin
+def export_orders_csv():
+    import csv
+    from io import StringIO
+
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    scope = (request.args.get("scope") or "today").strip().lower()  # today|all
+
+    orders = load_orders()
+    # filtra por tenant
+    orders = [o for o in orders if o.get("tenant_slug") == slug]
+    # escopo: só hoje por padrão
+    if scope != "all":
+        orders = [o for o in orders if _is_today_iso(o.get("created_at"))]
+
+    # ordena por data
+    def _key(o):
+        try:
+            return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
+        except Exception:
+            return datetime.min
+    orders.sort(key=_key)
+
+    # monta CSV
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "id","created_at","table_code","customer_name","status",
+        "items_count","subtotal","service_fee","total","closed","items_compact"
+    ])
+    for o in orders:
+        items = o.get("items") or []
+        items_compact = " | ".join([f'{it.get("qty","")}x {it.get("name","")} (= {it.get("line_total",0)})' for it in items])
+        writer.writerow([
+            o.get("id",""),
+            o.get("created_at",""),
+            o.get("table_code",""),
+            o.get("customer_name",""),
+            o.get("status",""),
+            len(items),
+            o.get("subtotal",0),
+            o.get("service_fee",0),
+            o.get("total",0),
+            o.get("closed", False),
+            items_compact
+        ])
+
+    csv_data = buf.getvalue()
+    filename = f'orders_{slug}_{scope}.csv'
+    return Response(
+        csv_data,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -321,3 +376,4 @@ def tabs_close():
         "orders_count": len(affected),
         "total": total
     })
+
