@@ -377,3 +377,16 @@ def tabs_close():
         "total": total
     })
 
+
+def get_service_fee_pct():
+    try:
+        return float(os.environ.get("SERVICE_FEE_PCT", "0") or 0.0)
+    except Exception:
+        return 0.0
+
+@app.get("/api/config")
+@require_admin
+def get_config():
+    return jsonify({
+        "service_fee_pct": get_service_fee_pct()
+    })
