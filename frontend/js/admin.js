@@ -520,3 +520,38 @@ async function renderTabsSummary() {
     if (all) all.addEventListener("click", ()=> window.open(`/api/orders/export.csv?slug=${encodeURIComponent(slug)}&scope=all`, "_blank"));
   } catch(e) { console.warn("export buttons:", e); }
 })();
+
+let SERVICE_FEE_PCT = 0;
+async function fetchAdminConfig(){
+  try{
+    const r = await fetch(`/api/config?slug=${encodeURIComponent(getSlug())}`, {headers:{Accept:"application/json"}});
+    if(r.ok){ const c = await r.json(); SERVICE_FEE_PCT = Number(c.service_fee_pct||0); }
+  }catch(e){ console.warn("config", e); }
+}
+window.addEventListener("load", fetchAdminConfig);
+
+function printTab(table, items){
+  const subtotal = items.reduce((a,b)=>a+(b.total||0),0);
+  const fee = Math.round(subtotal*(SERVICE_FEE_PCT||0)*100)/100;
+  const grand = Math.round((subtotal+fee)*100)/100;
+  const rows = (items||[]).map(it=>`<tr><td>#${it.id}</td><td>${(new Date(it.created_at)).toLocaleTimeString("pt-BR")}</td><td style="text-align:right">${(it.total||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td></tr>`).join("");
+  const w = window.open("","_blank","width=420,height=600");
+  const html = `
+  <html><head><meta charset="utf-8"><title>Conta Mesa ${table}</title>
+  <style>body{font-family:Arial,sans-serif;padding:12px}h2{margin:0 0 8px}table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #eee}.tot{font-weight:700}.right{text-align:right}.muted{color:#666}</style></head>
+  <body>
+    <h2>Conta — Mesa ${table}</h2>
+    <div class="muted">${new Date().toLocaleString("pt-BR")}${SERVICE_FEE_PCT?` • Taxa de serviço: ${(SERVICE_FEE_PCT*100).toFixed(0)}%`:``}</div>
+    <table>
+      <thead><tr><th>Pedido</th><th>Hora</th><th class="right">Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr><td colspan="2" class="tot right">Subtotal</td><td class="tot right">${subtotal.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td></tr>
+        <tr><td colspan="2" class="tot right">Taxa de serviço ${SERVICE_FEE_PCT?`(${(SERVICE_FEE_PCT*100).toFixed(0)}%)`:``}</td><td class="tot right">${fee.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td></tr>
+        <tr><td colspan="2" class="tot right">TOTAL</td><td class="tot right">${grand.toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td></tr>
+      </tfoot>
+    </table>
+    <script>window.print();<\/script>
+  </body></html>`;
+  w.document.write(html); w.document.close();
+}
