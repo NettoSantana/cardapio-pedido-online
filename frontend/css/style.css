@@ -484,3 +484,6 @@ feat(cliente): trocar "Finalizar Pedido" por "Solicitar Pedido" e adicionar "His
 .tabs-summary:first-of-type { display:block; }
 /* override: mostrar seção normalmente; JS cuida das duplicatas */
 .tabs-summary { display:block !important; }
+/* mantém visível só a primeira seção "Mesas de hoje" caso o HTML venha duplicado */
+.tabs-summary { display:none !important; }
+.tabs-summary:first-of-type { display:block !important; }
