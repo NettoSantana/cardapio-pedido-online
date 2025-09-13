@@ -479,3 +479,6 @@ feat(cliente): trocar "Finalizar Pedido" por "Solicitar Pedido" e adicionar "His
 .badge.closed { background:#eef7ef; border:1px solid #cfe6d2; }
 .card .row { display:flex; justify-content:space-between; margin:6px 0; }
 .card .actions { margin-top:8px; }
+/* mostra só a primeira seção "Mesas de hoje" se houver duplicatas */
+.tabs-summary { display:none; }
+.tabs-summary:first-of-type { display:block; }
