@@ -399,3 +399,106 @@ async function renderTabsSummary() {
     grid.appendChild(card);
   }
 }
+async function fetchTabsSummary() {
+  const res = await fetch(`/api/tabs/summary?slug=${encodeURIComponent(getSlug())}`, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+async function closeTab(table) {
+  if (!confirm(`Fechar conta da mesa ${table}?`)) return;
+  try {
+    const res = await fetch(`/api/tabs/close?slug=${encodeURIComponent(getSlug())}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ table })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await res.json();
+    await renderTabsSummary();
+    await loadOrders();
+  } catch (e) {
+    alert("Erro ao fechar conta.");
+    console.error(e);
+  }
+}
+function printTab(table, items) {
+  const total = items.reduce((a,b)=>a+(b.total||0),0);
+  const rows = items.map(it=>`<tr><td>#${it.id}</td><td>${(new Date(it.created_at)).toLocaleTimeString("pt-BR")}</td><td style="text-align:right">${(it.total||0).toLocaleString('pt-BR',{style:'currency','currency':'BRL'})}</td></tr>`).join("");
+  const w = window.open("", "_blank", "width=420,height=600");
+  const html = `
+    <html><head><meta charset="utf-8"><title>Conta Mesa ${table}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:12px}
+      h2{margin:0 0 8px}
+      table{width:100%;border-collapse:collapse}
+      td,th{padding:6px;border-bottom:1px solid #eee}
+      .tot{font-weight:700;text-align:right}
+    </style></head>
+    <body>
+      <h2>Conta — Mesa ${table}</h2>
+      <table>
+        <thead><tr><th>Pedido</th><th>Hora</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><td colspan="2" class="tot">TOTAL</td><td class="tot">${total.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td></tr></tfoot>
+      </table>
+      <script>window.print();<\/script>
+    </body></html>`;
+  w.document.write(html); w.document.close();
+}
+async function renderTabsSummary() {
+  const grid = document.getElementById("tablesGrid");
+  if (!grid) return;
+  grid.innerHTML = '<div class="card"><div class="muted">Carregando…</div></div>';
+
+  const [summary, orders] = await Promise.all([fetchTabsSummary(), fetchOrders()]);
+  const todayOrders = orders.filter(o => isTodayIsoZ(o.created_at) && (o.tenant_slug ? o.tenant_slug===getSlug() : true));
+
+  grid.innerHTML = "";
+  if (!summary.length) {
+    grid.innerHTML = '<div class="muted">Sem mesas hoje.</div>';
+    return;
+  }
+
+  for (const t of summary) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = `Mesa ${t.table}`;
+    const badge = document.createElement("span");
+    badge.className = "badge " + (t.closed ? "closed" : "open");
+    badge.textContent = t.closed ? "Fechada" : "Aberta";
+    h3.appendChild(document.createTextNode(" "));
+    h3.appendChild(badge);
+
+    const row1 = document.createElement("div");
+    row1.className = "row";
+    const c1 = document.createElement("div"); c1.textContent = `${t.count} pedido(s)`;
+    const c2 = document.createElement("div"); c2.textContent = (t.total||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+    row1.appendChild(c1); row1.appendChild(c2);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const btnClose = document.createElement("button");
+    btnClose.className = "btn btn-sm";
+    btnClose.textContent = "Fechar conta";
+    btnClose.disabled = t.closed || t.count===0;
+    btnClose.onclick = () => closeTab(t.table);
+
+    const btnPrint = document.createElement("button");
+    btnPrint.className = "btn btn-sm btn-outline";
+    btnPrint.textContent = "Imprimir";
+    btnPrint.onclick = () => {
+      const items = todayOrders.filter(o => (o.table_code||"").trim().toLowerCase() === t.table.toLowerCase());
+      printTab(t.table, items);
+    };
+
+    actions.appendChild(btnClose);
+    actions.appendChild(btnPrint);
+
+    card.appendChild(h3);
+    card.appendChild(row1);
+    card.appendChild(actions);
+    grid.appendChild(card);
+  }
+}
