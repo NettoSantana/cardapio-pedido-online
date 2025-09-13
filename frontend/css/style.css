@@ -487,3 +487,33 @@ feat(cliente): trocar "Finalizar Pedido" por "Solicitar Pedido" e adicionar "His
 /* mantém visível só a primeira seção "Mesas de hoje" caso o HTML venha duplicado */
 
 
+/* --- Header com logo --- */
+.site-header { background:#fff; border-bottom:1px solid #eee; position:sticky; top:0; z-index:10; }
+.hdr { display:flex; align-items:center; gap:12px; padding:10px 0; }
+.logo { height:40px; width:auto; object-fit:contain; }
+.brand-name { font-size:18px; font-weight:700; line-height:1.1; }
+.brand-sub { font-size:12px; color:#777; }
+
+/* --- Polimento leve global --- */
+:root { --space: 20px; --accent:#111; }
+body { font-family: system-ui, Arial, sans-serif; line-height:1.45; color:#111; background:#fafafa; }
+.container { max-width: 980px; margin: 0 auto; padding: 0 var(--space); }
+h1,h2,h3 { letter-spacing:.2px; }
+a { color: var(--accent); text-decoration: none; }
+.btn { padding:10px 14px; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; }
+.btn:hover { filter: brightness(0.9); }
+.btn-outline { background:#fff; color:var(--accent); border:1px solid var(--accent); }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+
+/* --- Lista do cardápio (respiro) --- */
+.item-row { display:flex; justify-content:space-between; align-items:flex-start; padding:12px 0; border-bottom:1px solid #eee; gap:12px; }
+.item-name { font-weight:600; font-size:16px; }
+.item-desc { color:#555; font-size:13px; margin-top:2px; }
+.item-right { white-space:nowrap; font-weight:700; }
+
+/* --- Cards Mesas de hoje --- */
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
+.card { border:1px solid #eee; border-radius:12px; padding:12px; background:#fff; }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; }
+.badge.open { background:#ffe; border:1px solid #ddc; }
+.badge.closed { background:#eef7ef; border:1px solid #cfe6d2; }
