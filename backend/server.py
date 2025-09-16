@@ -486,3 +486,23 @@ def admin_env_health():
 
 
 
+# ===== ROTA TEMPORÁRIA DE DEBUG (REMOVE DEPOIS) =====
+@app.get("/admin-debug")
+def admin_debug():
+    """
+    Acessa o admin sem BasicAuth quando ADMIN_AUTH_BYPASS=1
+    ou se ?dev=<ADMIN_USER> for passado — apenas DEBUG.
+    """
+    # segurança extra: permite só quando a variável de bypass estiver ativa
+    if (os.environ.get("ADMIN_AUTH_BYPASS") or "").strip() != "1":
+        # permitir também via ?dev=USER para caso queira
+        if request.args.get("dev", "").strip() != (os.environ.get("ADMIN_USER") or "").strip():
+            abort(401)
+
+    # slug obrigatório (como o admin normal)
+    slug = (request.args.get("slug") or "").strip()
+    if not slug:
+        abort(400, "slug é obrigatório")
+
+    # entrega o arquivo admin.html do frontend (mesma página do admin)
+    return send_from_directory(FRONTEND_DIR, "admin.html")
