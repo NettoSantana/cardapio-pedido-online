@@ -582,3 +582,9 @@ a:hover { text-decoration: underline; }
 .history-order{border:1px solid #eee;border-radius:8px;padding:10px;margin:10px 0}
 .h-row{display:flex;justify-content:space-between;margin-bottom:6px}
 .h-item{display:flex;justify-content:space-between;color:#444;padding:2px 0}
+/* ==== ADMIN: alinhamento e lista de itens ==== */
+table { border-collapse: collapse; width: 100%; }
+table th, table td { vertical-align: top; }  /* colunas no topo */
+.item-row { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #eee; }
+.item-row:last-child { border-bottom:0; }
+.btn-mini { padding:4px 8px; font-size:12px; border-radius:6px; cursor:pointer; }
