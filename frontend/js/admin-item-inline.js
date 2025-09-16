@@ -1,4 +1,4 @@
-﻿(function PerItemInlineButtons(){
+﻿(function PerItemInlineButtonsV2(){
   function withAuth(path){
     const q = new URLSearchParams(location.search);
     const url = new URL(path, location.origin);
@@ -26,34 +26,26 @@
     return res.json().catch(()=>null);
   }
 
-  function wireRow(row, order){
-    // coluna "Itens" (3ª)
-    const cell = row.querySelector("td:nth-child(3)");
-    if (!cell) return;
+  function renderItemsCell(cell, order){
+    // monta nossa UL padronizada (independe do HTML original)
+    const ul = document.createElement("ul");
+    ul.style.listStyle = "none";
+    ul.style.padding = "0";
+    ul.style.margin = "0";
 
-    // lista existente
-    const ul = cell.querySelector("ul");
-    if (!ul) return;
-
-    // marca cada li pra layout lado-a-lado
-    const lis = [...ul.querySelectorAll("li")];
-    lis.forEach(li => li.classList.add("item-row"));
-
-    // remove botões antigos (se houver)
-    ul.querySelectorAll(".btn-mini, .per-item-right, .delivered-flag").forEach(x=>x.remove());
-
-    // pareia por índice: li[i] <-> order.items[i]
-    (order.items || []).forEach((it, i) => {
-      const li = lis[i];
-      if (!li) return;
+    (order.items || []).forEach(it => {
+      const li = document.createElement("li");
+      li.className = "item-row";
+      // texto do item
+      const left = document.createElement("span");
+      left.textContent = `${it.qty}× ${it.name}`;
+      // ação à direita
+      const right = document.createElement("span");
+      right.style.marginLeft = "8px";
 
       const qty = Number(it.qty || 0);
       const dq  = Number(it.delivered_qty || 0);
       const rem = Math.max(0, qty - dq);
-
-      // área à direita
-      const right = document.createElement("span");
-      right.className = "per-item-right";
 
       if (rem > 0) {
         const btn = document.createElement("button");
@@ -63,20 +55,32 @@
           btn.disabled = true;
           try { await deliver(order.id, it.id, rem); }
           catch(e){ alert("Falha ao entregar item."); }
-          finally { btn.disabled = false; refresh(); }
+          finally {
+            btn.disabled = false;
+            hydrate();   // recarrega lista
+          }
         };
         right.appendChild(btn);
       } else {
-        const flag = document.createElement("span");
-        flag.className = "delivered-flag";
-        flag.textContent = "✔";
-        flag.style.color = "#0a0";
-        right.appendChild(flag);
+        const ok = document.createElement("span");
+        ok.textContent = "✔ Entregue";
+        ok.style.color = "#0a0";
+        right.appendChild(ok);
       }
 
-      // injeta na LI (fica ao lado por causa do display:flex do CSS)
+      li.appendChild(left);
       li.appendChild(right);
+      ul.appendChild(li);
     });
+
+    // substitui conteúdo da célula pelos nossos itens
+    cell.innerHTML = "";
+    cell.appendChild(ul);
+  }
+
+  function wireRow(row, order){
+    const itemsCell = row.querySelector("td:nth-child(3)");
+    if (itemsCell) renderItemsCell(itemsCell, order);
   }
 
   async function hydrate(){
@@ -87,14 +91,10 @@
         const row = rows[i];
         if (row) wireRow(row, o);
       });
-    }catch(e){
-      console.error("[per-item-inline] erro:", e);
-    }
+    }catch(e){ console.error("[per-item-inline:v2] erro:", e); }
   }
-
-  function refresh(){ hydrate(); }
 
   // primeira carga + refresh a cada 5s
   hydrate();
-  setInterval(refresh, 5000);
+  setInterval(hydrate, 5000);
 })();
