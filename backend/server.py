@@ -2,10 +2,17 @@
 import json
 import itertools
 from flask import Flask, send_from_directory, jsonify, request, abort, Response
+import base64
+from datetime import datetime
 
 # Caminhos base
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+DEFAULT_SLUG = "bar-do-netto"
+DATA_DIR = os.path.join(BASE_DIR, "db")
+DB_DIR = os.path.join(DATA_DIR, "json")
+ORDERS_FILE = os.path.join(DB_DIR, "orders.json")
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
@@ -15,30 +22,32 @@ app = Flask(
 # ===========================
 # Auth (HTTP Basic)
 # ===========================
-ADMIN_USER = os.environ.get("ADMIN_USER") or "admin"
-ADMIN_PASS = os.environ.get("ADMIN_PASS") or "changeme"
+ADMIN_USER = (os.environ.get("ADMIN_USER") or "admin").strip()
+ADMIN_PASS = (os.environ.get("ADMIN_PASS") or "changeme").strip()
 
 def _unauthorized():
     return Response(status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'})
-
-def _parse_basic_auth():
-    h = request.headers.get("Authorization", "")
-    if not h.lower().startswith("basic "):
-        return None, None
-    try:
-        raw = base64.b64decode(h.split(" ", 1)[1]).decode("utf-8")
-        user, pwd = raw.split(":", 1)
-        return user, pwd
-    except Exception:
-        return None, None
 
 def require_admin(fn):
     from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        user, pwd = _parse_basic_auth()
-        if user == ADMIN_USER and pwd == ADMIN_PASS:
+        # 1) Tenta o Basic Auth do Flask
+        auth = request.authorization
+        if auth and (auth.username or '').strip() == ADMIN_USER and (auth.password or '').strip() == ADMIN_PASS:
             return fn(*args, **kwargs)
+
+        # 2) Fallback: header Authorization manual (caso algum proxy mexa)
+        h = request.headers.get('Authorization') or ''
+        if h.lower().startswith('basic '):
+            try:
+                decoded = base64.b64decode(h.split(' ',1)[1]).decode('utf-8')
+                u, p = decoded.split(':', 1)
+                if u.strip() == ADMIN_USER and p.strip() == ADMIN_PASS:
+                    return fn(*args, **kwargs)
+            except Exception:
+                pass
+
         return _unauthorized()
     return wrapper
 
@@ -506,3 +515,7 @@ def admin_debug():
 
     # entrega o arquivo admin.html do frontend (mesma página do admin)
     return send_from_directory(FRONTEND_DIR, "admin.html")
+
+
+
+
