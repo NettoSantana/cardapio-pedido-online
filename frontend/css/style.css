@@ -682,3 +682,11 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 .btn-small{padding:2px 8px;line-height:1.2;border-radius:6px;cursor:pointer}
 .btn-small.entregar-btn{border:1px solid #0a58ca;background:#fff;color:#0a58ca}
 .btn-small.entregar-btn:hover{background:#0a58ca;color:#fff}
+/* admin cols (safe) */
+.table-admin td, .table-admin th { vertical-align: top; }
+.admin-col-id{width:60px;white-space:nowrap}
+.admin-col-mesa{width:80px;white-space:nowrap}
+.admin-col-itens{min-width:420px}
+.admin-col-total{width:120px;white-space:nowrap;text-align:right}
+.admin-col-status{width:110px;white-space:nowrap}
+.admin-col-acoes{width:160px;white-space:nowrap}
