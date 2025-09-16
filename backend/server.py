@@ -32,18 +32,31 @@ def require_admin(fn):
     from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        # 1) Tenta o Basic Auth do Flask
+        # 0) DEV bypass por query: ?dev=<ADMIN_USER>
+        try:
+            if (request.args.get("dev") or "").strip() == ADMIN_USER and ADMIN_USER:
+                return fn(*args, **kwargs)
+        except Exception:
+            pass
+
+        # 1) Query-string: ?u=<user>&p=<pass>
+        u = (request.args.get("u") or "").strip()
+        p = (request.args.get("p") or "").strip()
+        if u and p and u == ADMIN_USER and p == ADMIN_PASS:
+            return fn(*args, **kwargs)
+
+        # 2) Basic Auth normal (navegador)
         auth = request.authorization
         if auth and (auth.username or '').strip() == ADMIN_USER and (auth.password or '').strip() == ADMIN_PASS:
             return fn(*args, **kwargs)
 
-        # 2) Fallback: header Authorization manual (caso algum proxy mexa)
+        # 3) Fallback: header Authorization manual (proxy)
         h = request.headers.get('Authorization') or ''
         if h.lower().startswith('basic '):
             try:
                 decoded = base64.b64decode(h.split(' ',1)[1]).decode('utf-8')
-                u, p = decoded.split(':', 1)
-                if u.strip() == ADMIN_USER and p.strip() == ADMIN_PASS:
+                uu, pp = decoded.split(':', 1)
+                if uu.strip() == ADMIN_USER and pp.strip() == ADMIN_PASS:
                     return fn(*args, **kwargs)
             except Exception:
                 pass
@@ -523,3 +536,4 @@ def admin_debug():
 @require_admin
 def admin_alerts_minimal():
     return send_from_directory(FRONTEND_DIR, "admin_alerts.html")
+
