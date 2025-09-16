@@ -1,9 +1,8 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Painel</title>
   <link rel="stylesheet" href="css/admin-spa.css">
   <script>
   (function(){
@@ -11,11 +10,11 @@
       var bar = document.getElementById('admin-appbar');
       if (!bar) return;
       var body = document.body;
-      // remove atÃ© 3 <a> diretos no inÃ­cio do body (breadcrumbs antigos)
+      // remove até 3 <a> diretos no início do body (breadcrumbs antigos)
       for (var i=0; i<3; i++){
         var a = body.querySelector('body > a');
         if (!a) break;
-        // sÃ³ remove se estiver acima da appbar
+        // só remove se estiver acima da appbar
         var br = bar.getBoundingClientRect();
         var ar = a.getBoundingClientRect();
         if (ar.top < br.top) { a.remove(); } else { break; }
@@ -27,7 +26,7 @@
   </script>
   <script id="nuke-top-links">
   (function(){
-    // tenta reconhecer a appbar por vÃ¡rios seletores comuns
+    // tenta reconhecer a appbar por vários seletores comuns
     function getAppbar(){
       return document.querySelector('#admin-appbar, .appbar, [data-appbar]');
     }
@@ -35,11 +34,11 @@
       var bar = getAppbar();
       if (!bar) return;
       var body = document.body;
-      // enquanto o primeiro filho do body NÃƒO for a appbar, remove-o
+      // enquanto o primeiro filho do body NÃO for a appbar, remove-o
       while (body.firstElementChild && body.firstElementChild !== bar){
         body.firstElementChild.remove();
       }
-      // se por algum motivo a appbar nÃ£o for o primeiro, mas existir algo antes dela, remove tudo atÃ© ela
+      // se por algum motivo a appbar não for o primeiro, mas existir algo antes dela, remove tudo até ela
       if (bar && bar.previousElementSibling){
         var node = bar.previousElementSibling;
         while(node){
@@ -70,12 +69,8 @@
         while(n){ var prev = n.previousElementSibling; n.remove(); n = prev; }
       }
 
-      // 2) tambÃ©m apaga QUALQUER bloco topo cujo texto tenha todos: Painel, Chamados, Editar CardÃ¡pio
       function looksLikeBad(el){
         var t = (el.textContent||"").trim().replace(/\s+/g,' ');
-        return t && t.toLowerCase().includes('painel')
-                 && t.toLowerCase().includes('chamados')
-                 && (t.toLowerCase().includes('editar card') || t.toLowerCase().includes('editar cardÃ¡pio'));
       }
       Array.from(document.body.children).forEach(function(el){
         if (el.tagName && el.tagName.toLowerCase()!=='header' && looksLikeBad(el)) el.remove();
@@ -92,7 +87,7 @@
     body > a:nth-of-type(2),
     body > a:nth-of-type(3) { display:none !important; }
 
-    /* Se alguÃ©m embrulhou em um contÃªiner textual antes do header, some tambÃ©m */
+    /* Se alguém embrulhou em um contêiner textual antes do header, some também */
     body > div:first-of-type > a[href], 
     body > p:first-of-type > a[href] { display:none !important; }
   </style>
@@ -106,10 +101,8 @@
 <div class="header-brand">
   <img src="img/logo.png" alt="Logo" onerror="this.style.display=\"none\"">
   <div class="title">Bar do Netto</div>
-  <!-- o badge de chamados serÃ¡ anexado aqui pelo JS -->
 </div>
 <script src="js/admin-tabs.js?v=20250916134701"></script>
-<script src="js/admin-chamados.js?v=20250916135033"></script>
 
 
 
