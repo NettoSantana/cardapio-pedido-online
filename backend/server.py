@@ -470,3 +470,11 @@ def api_alerts_ack():
     return jsonify({"ok": False, "reason": "not_found_or_closed"}), 404
 
 
+# ===== Debug admin env (temporário) =====
+@app.get("/health/admin-env")
+def admin_env_health():
+    user = (os.environ.get("ADMIN_USER") or "").strip()
+    has_pass = bool((os.environ.get("ADMIN_PASS") or "").strip())
+    # mascara o usuário deixando só primeiros 2 chars
+    masked_user = (user[:2] + "***") if user else ""
+    return jsonify(ok=True, admin_user=masked_user, has_admin_pass=has_pass)
