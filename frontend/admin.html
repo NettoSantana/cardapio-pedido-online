@@ -91,11 +91,49 @@
     body > div:first-of-type > a[href], 
     body > p:first-of-type > a[href] { display:none !important; }
   </style>
+<style id="tabs-pill-css">
+  /* Tabs no estilo do botão Chamados (pílula) */
+  .admin-tabs{ margin-left:12px; display:inline-flex; gap:10px; vertical-align:middle }
+
+  /* força cor/fundo/borda nos links */
+  .admin-tabs .admin-tab,
+  .admin-tabs .admin-tab:link,
+  .admin-tabs .admin-tab:visited{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:9999px;
+    border:1px solid #d0d7de !important;
+    background:#ffffff !important;
+    color:#0d6efd !important;
+    font-weight:600;
+    text-decoration:none !important;
+    line-height:1;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
+  }
+
+  .admin-tabs .admin-tab:hover{
+    background:#f3f6ff !important;
+    text-decoration:none !important;
+  }
+
+  .admin-tabs .admin-tab.active,
+  .admin-tabs .admin-tab.active:link,
+  .admin-tabs .admin-tab.active:visited{
+    background:#0d6efd !important;
+    border-color:#0d6efd !important;
+    color:#ffffff !important;
+  }
+
+  /* garante alinhamento do título + abas + badge */
+  .topbar h1, header h1, .header h1, .appbar h1, h1{
+    display:inline-block; vertical-align:middle;
+  }
+</style>
 </head>
 <body>
   <div id="app-admin"></div>
   <script src="js/admin-spa.js"></script>
-<script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916162855"></script>
+<script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916192449"></script>
 </body>
 </html>
 <!-- header-brand (branding) -->
@@ -103,6 +141,7 @@
   <img src="img/logo.png" alt="Logo" onerror="this.style.display=\"none\"">
   <div class="title">Bar do Netto</div>
 </div>
+
 
 
 
