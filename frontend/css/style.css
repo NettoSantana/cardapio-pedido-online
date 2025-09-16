@@ -799,3 +799,7 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 .alert-card .actions .btn{ padding:6px 10px; border-radius:8px; }
 
 
+/* Esconde âncoras soltas no topo (antes da appbar) */
+body > a:first-of-type,
+body > a:first-of-type + a,
+body > a:first-of-type + a + a { display:none !important; }

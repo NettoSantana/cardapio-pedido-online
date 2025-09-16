@@ -5,6 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Painel</title>
   <link rel="stylesheet" href="css/admin-spa.css">
+  <script>
+  (function(){
+    function nukeTopAnchors(){
+      var bar = document.getElementById('admin-appbar');
+      if (!bar) return;
+      var body = document.body;
+      // remove até 3 <a> diretos no início do body (breadcrumbs antigos)
+      for (var i=0; i<3; i++){
+        var a = body.querySelector('body > a');
+        if (!a) break;
+        // só remove se estiver acima da appbar
+        var br = bar.getBoundingClientRect();
+        var ar = a.getBoundingClientRect();
+        if (ar.top < br.top) { a.remove(); } else { break; }
+      }
+    }
+    document.addEventListener('DOMContentLoaded', nukeTopAnchors);
+    new MutationObserver(nukeTopAnchors).observe(document.documentElement, {childList:true, subtree:true});
+  })();
+  </script>
 </head>
 <body>
   <div id="app-admin"></div>
@@ -19,6 +39,8 @@
 </div>
 <script src="js/admin-tabs.js?v=20250916134701"></script>
 <script src="js/admin-chamados.js?v=20250916135033"></script>
+
+
 
 
 
