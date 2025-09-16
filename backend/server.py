@@ -2,7 +2,7 @@
 import json
 import base64
 from datetime import datetime
-from flask import Flask, send_from_directory, jsonify, request, abort, Response
+import itertools`nfrom flask import Flask
 
 # Caminhos
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
