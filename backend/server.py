@@ -480,16 +480,7 @@ def admin_env_health():
     return jsonify(ok=True, admin_user=masked_user, has_admin_pass=has_pass)
 
 
-@app.get("/health/auth-received")
-def _auth_received():
-    ok = bool(request.headers.get("Authorization"))
-    return jsonify(ok=ok)
 
-@app.get("/health/auth-received")
-def _auth_received():
-    return jsonify(ok=bool(request.headers.get("Authorization")))
 
-@app.get("/health/auth-received", endpoint="auth_received_debug")
-def auth_received_debug():
-    return jsonify(ok=bool(request.headers.get("Authorization")))
+
 
