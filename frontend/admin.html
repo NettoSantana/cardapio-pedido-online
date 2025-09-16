@@ -53,27 +53,35 @@
     new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
   })();
   </script>
+  
   <script id="purge-preheader">
   (function(){
     function nukeBeforeFirstHeader(){
       var body = document.body;
       var header = document.querySelector('header');
-      if (!body || !header) return; // se algum dia não tiver header, não faz nada
+      if (!body) return;
 
-      // remove tudo que vem antes do PRIMEIRO <header>
-      while (body.firstElementChild && body.firstElementChild !== header){
-        body.firstElementChild.remove();
+      // 1) apaga tudo que vier antes do primeiro <header>
+      if (header){
+        while (body.firstElementChild && body.firstElementChild !== header){
+          body.firstElementChild.remove();
+        }
+        var n = header.previousElementSibling;
+        while(n){ var prev = n.previousElementSibling; n.remove(); n = prev; }
       }
-      // se por acaso ainda existir algo antes do header, remove também
-      var n = header.previousElementSibling;
-      while (n){
-        var prev = n.previousElementSibling;
-        n.remove();
-        n = prev;
+
+      // 2) também apaga QUALQUER bloco topo cujo texto tenha todos: Painel, Chamados, Editar Cardápio
+      function looksLikeBad(el){
+        var t = (el.textContent||"").trim().replace(/\s+/g,' ');
+        return t && t.toLowerCase().includes('painel')
+                 && t.toLowerCase().includes('chamados')
+                 && (t.toLowerCase().includes('editar card') || t.toLowerCase().includes('editar cardápio'));
       }
+      Array.from(document.body.children).forEach(function(el){
+        if (el.tagName && el.tagName.toLowerCase()!=='header' && looksLikeBad(el)) el.remove();
+      });
     }
     document.addEventListener('DOMContentLoaded', nukeBeforeFirstHeader);
-    // Se scripts de terceiros injetarem porcaria depois, limpa de novo
     new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
   })();
   </script>
@@ -91,6 +99,7 @@
 </div>
 <script src="js/admin-tabs.js?v=20250916134701"></script>
 <script src="js/admin-chamados.js?v=20250916135033"></script>
+
 
 
 
