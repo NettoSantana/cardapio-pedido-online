@@ -85,6 +85,17 @@
     new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
   })();
   </script>
+  <!-- KILL-TOP-LINKS -->
+  <style>
+    /* Esconde os 3 primeiros <a> soltos no topo do <body> (os indesejados) */
+    body > a:nth-of-type(1),
+    body > a:nth-of-type(2),
+    body > a:nth-of-type(3) { display:none !important; }
+
+    /* Se alguém embrulhou em um contêiner textual antes do header, some também */
+    body > div:first-of-type > a[href], 
+    body > p:first-of-type > a[href] { display:none !important; }
+  </style>
 </head>
 <body>
   <div id="app-admin"></div>
@@ -99,6 +110,8 @@
 </div>
 <script src="js/admin-tabs.js?v=20250916134701"></script>
 <script src="js/admin-chamados.js?v=20250916135033"></script>
+
+
 
 
 
