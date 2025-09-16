@@ -807,3 +807,5 @@ body > a:first-of-type + a + a { display:none !important; }
 body > a { display:none !important; }
 /* Segurança: se alguém colocou anchors soltos no topo, some com eles */
 body > a, body > p:has(a) { display:none !important; }
+/* esconder atalhos antigos no topo (fallback) */
+.admin-tabs, .top-links, .admin-shortcuts { display:none !important; }
