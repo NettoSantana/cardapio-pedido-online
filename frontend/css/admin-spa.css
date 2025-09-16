@@ -1,0 +1,23 @@
+﻿/* admin-spa.css */
+:root{ --gap:10px; }
+body{ font-family:Arial, sans-serif; }
+.admin-wrap{ max-width:1100px; margin:16px auto; padding:0 12px; }
+.admin-head{ display:flex; align-items:center; gap:var(--gap); flex-wrap:wrap; margin-bottom:12px; }
+.admin-head .right{ margin-left:auto; display:flex; gap:var(--gap); flex-wrap:wrap; }
+.admin-filters button{ padding:6px 10px; border:1px solid #ccc; border-radius:6px; background:#fff; cursor:pointer; }
+.admin-filters button.active{ border-color:#111; font-weight:600; }
+.table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+.table th, .table td{ border-bottom:1px solid #eee; padding:10px; vertical-align:top; }
+.col-id{ width:70px; white-space:nowrap; }
+.col-mesa{ width:90px; white-space:nowrap; }
+.col-total{ width:120px; white-space:nowrap; text-align:right; }
+.col-status{ width:120px; white-space:nowrap; }
+.col-acoes{ width:160px; white-space:nowrap; }
+.items{ display:flex; flex-direction:column; gap:6px; min-width:420px; }
+.item-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.item-text{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.btn{ padding:6px 10px; border:0; border-radius:6px; background:#111; color:#fff; cursor:pointer; }
+.btn.outline{ background:#fff; color:#111; border:1px solid #111; }
+.btn.small{ padding:3px 8px; }
+.badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid #ddd; background:#f9f9f9; }
+.empty{ color:#666; padding:16px 0; }
