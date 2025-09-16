@@ -177,11 +177,14 @@ def my_orders_by_table():
         abort(400, "parâmetro 'table' é obrigatório")
 
     orders = load_orders()
+    # filtra: tenant, mesa, HOJE e apenas ENTREGUES
     data = [o for o in orders
             if o.get("tenant_slug") == slug
             and (o.get("table_code") or "").strip().lower() == table.lower()
-            and _is_today_iso(o.get("created_at"))]
+            and _is_today_iso(o.get("created_at"))
+            and (o.get("status") or "").lower() == "done"]
 
+    # ordena do mais recente para o mais antigo
     def _key(o):
         try:
             return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
@@ -189,8 +192,10 @@ def my_orders_by_table():
             return datetime.min
     data.sort(key=_key, reverse=True)
 
+    parcial = 0.0
     slim = []
     for o in data:
+        parcial += float(o.get("total") or 0)
         slim.append({
             "id": o.get("id"),
             "created_at": o.get("created_at"),
@@ -198,7 +203,8 @@ def my_orders_by_table():
             "total": o.get("total"),
             "items": [{"name": it.get("name"), "qty": it.get("qty"), "line_total": it.get("line_total")} for it in (o.get("items") or [])]
         })
-    return jsonify(slim)
+
+    return jsonify({"partial_total": parcial, "orders": slim})
 
 # Admin-only: listar pedidos
 @app.get("/api/orders")
@@ -536,4 +542,5 @@ def admin_debug():
 @require_admin
 def admin_alerts_minimal():
     return send_from_directory(FRONTEND_DIR, "admin_alerts.html")
+
 
