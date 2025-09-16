@@ -897,3 +897,81 @@ window.addEventListener("load", fetchAdminConfig);
   document.addEventListener("DOMContentLoaded", tick);
   setInterval(tick, 800);
 })();
+/* === Patch de UI (v2) — DOM-based === */
+(function(){
+  if (window.__adminFixLoopV2) return; window.__adminFixLoopV2 = true;
+
+  function collectItemLines(cell){
+    const lines = [];
+    // 1) pega todos os <li>
+    const lis = cell.querySelectorAll("li");
+    lis.forEach(li=>{
+      const t = (li.textContent||"").replace(/\s+/g," ").trim();
+      if (t) lines.push(t);
+    });
+    // 2) fallback: se não houver <li>, tenta por <br>
+    if (!lines.length){
+      const raw = (cell.innerHTML||"").trim();
+      raw.split(/<br\s*\/?>/i).map(s=>s.trim()).filter(Boolean).forEach(t=>lines.push(t));
+    }
+    return lines;
+  }
+
+  function fixRow(tr){
+    const tds = tr.querySelectorAll("td");
+    if (tds.length < 6) return;
+    const id=tds[0], mesa=tds[1], items=tds[2], tot=tds[3], sta=tds[4], act=tds[5];
+
+    id?.classList.add("admin-col-id");
+    mesa?.classList.add("admin-col-mesa");
+    items?.classList.add("items-col");
+    tot?.classList.add("admin-col-tot");
+    sta?.classList.add("admin-col-sta");
+    act?.classList.add("admin-col-act","actions-cell");
+
+    // Esconde tudo que não seja Cancelar/Entregar
+    act.querySelectorAll("button, a").forEach(b=>{
+      const txt = (b.textContent||"").trim().toLowerCase();
+      if (txt !== "cancelar" && txt !== "entregar") b.style.display = "none";
+    });
+
+    // Se já montamos .item-row, não refaz
+    if (items.querySelector(".item-row")) return;
+
+    const lines = collectItemLines(items);
+    if (!lines.length) return;
+
+    // Limpa conteúdo e monta linhas
+    items.innerHTML = "";
+    lines.forEach(t=>{
+      const row = document.createElement("div");
+      row.className = "item-row";
+      const span = document.createElement("span");
+      span.className = "item-text";
+      span.textContent = t;
+      row.appendChild(span);
+      items.appendChild(row);
+    });
+
+    // Move "Entregar" para o fim de cada linha (1:1 se existir)
+    const entregarBtns = Array.from(act.querySelectorAll("button, a"))
+      .filter(b => (b.textContent||"").trim().toLowerCase()==="entregar");
+    const rows = Array.from(items.querySelectorAll(".item-row"));
+    entregarBtns.forEach((btn,i)=>{
+      const target = rows[i] || rows[rows.length-1];
+      btn.classList.add("btn-small","entregar-btn");
+      btn.style.display = "";
+      target.appendChild(btn);
+    });
+  }
+
+  function tick(){
+    const table = document.querySelector("table");
+    if (!table) return;
+    table.classList.add("admin-table");
+    document.querySelectorAll("tbody tr").forEach(fixRow);
+  }
+
+  document.addEventListener("DOMContentLoaded", tick);
+  setInterval(tick, 800);
+})();
