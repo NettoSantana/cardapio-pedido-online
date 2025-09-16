@@ -635,3 +635,104 @@ window.addEventListener("load", fetchAdminConfig);
   fetchAlerts();
   timer = setInterval(fetchAlerts, 5000);
 })();
+/* --- Pós-render: normaliza UI da tabela --- */
+(function patchAdminUI(){
+  // roda depois de cada atualização do painel
+  const origRender = window.renderOrders;
+  window.renderOrders = function(data){
+    const out = origRender ? origRender(data) : undefined;
+    try{
+      // 1) marca a tabela e colunas (se existirem)
+      const table = document.querySelector("table");
+      if (table) table.classList.add("admin-table");
+
+      // descobre a coluna de Itens (3ª col normalmente)
+      const rows = document.querySelectorAll("tbody tr");
+      rows.forEach(tr => {
+        const tds = tr.querySelectorAll("td");
+        if (!tds.length) return;
+
+        // marca colunas conhecidas para CSS ajudar no alinhamento
+        if (tds[0]) tds[0].classList.add("admin-col-id");
+        if (tds[1]) tds[1].classList.add("admin-col-mesa");
+        if (tds[2]) tds[2].classList.add("items-col");   // <- itens
+        if (tds[3]) tds[3].classList.add("admin-col-tot");
+        if (tds[4]) tds[4].classList.add("admin-col-sta");
+        if (tds[5]) tds[5].classList.add("admin-col-act","actions-cell");
+
+        // 2) transforma cada linha de item para (texto + botão) inline
+        const itemsCell = tds[2];
+        if (itemsCell){
+          // pega linhas já renderizadas (li, divs ou brs) e normaliza
+          // estratégia: fatiar pelo <br> ou por elementos de linha existentes
+          const parts = [];
+          // se já veio com .item-row, só dá o class e segue
+          const existingRows = itemsCell.querySelectorAll(".item-row");
+          if (existingRows.length === 0){
+            // tenta dividir manualmente
+            const html = itemsCell.innerHTML
+              .replace(/\n+/g,"")
+              .replace(/<\/?ul>|<\/?ol>|<\/?li>/gi,"")
+              .replace(/&nbsp;/g, " ")
+              .trim();
+            const chunks = html.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
+            itemsCell.innerHTML = ""; // vamos remontar
+            chunks.forEach(txt => {
+              const row = document.createElement("div");
+              row.className = "item-row";
+              const span = document.createElement("span");
+              span.className = "item-text";
+              span.textContent = txt.replace(/\s+/g," ").trim();
+              row.appendChild(span);
+              // só adiciona botão se o pedido não estiver "done/cancelled"
+              const orderDone = (tds[4]?.textContent || "").toLowerCase().includes("done")
+                             || (tds[4]?.textContent || "").toLowerCase().includes("cancel");
+              if (!orderDone){
+                const btn = document.createElement("button");
+                btn.className = "btn-small entregar-btn";
+                btn.type = "button";
+                btn.textContent = "Entregar";
+                // se existir data-order-id no TR e data-item-id no texto, você pode ligar aqui
+                btn.addEventListener("click", () => {
+                  // fallback: dispara o mesmo handler original se existir
+                  if (window.onDeliverItem) window.onDeliverItem(tr, span.textContent);
+                });
+                row.appendChild(btn);
+              }
+              itemsCell.appendChild(row);
+            });
+          } else {
+            // já está em item-row: garante classes e botão inline
+            existingRows.forEach(row => {
+              row.classList.add("item-row");
+              const textEl = row.querySelector(".item-text") || row.firstElementChild;
+              if (textEl) textEl.classList.add("item-text");
+              const orderDone = (tds[4]?.textContent || "").toLowerCase().includes("done")
+                             || (tds[4]?.textContent || "").toLowerCase().includes("cancel");
+              if (!orderDone && !row.querySelector(".entregar-btn")){
+                const btn = document.createElement("button");
+                btn.className = "btn-small entregar-btn";
+                btn.type = "button";
+                btn.textContent = "Entregar";
+                btn.addEventListener("click", () => {
+                  if (window.onDeliverItem) window.onDeliverItem(tr, textEl?.textContent || "");
+                });
+                row.appendChild(btn);
+              }
+            });
+          }
+        }
+
+        // 3) some com "Avançar" se ainda existir
+        const btns = tds[5]?.querySelectorAll("button, a") || [];
+        btns.forEach(b => {
+          const label = (b.textContent || "").trim().toLowerCase();
+          if (label === "avançar" || label === "avancar") {
+            b.classList.add("btn-advance");
+          }
+        });
+      });
+    }catch(e){ console.error("patchAdminUI:", e); }
+    return out;
+  };
+})();
