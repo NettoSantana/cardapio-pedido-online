@@ -736,3 +736,86 @@ window.addEventListener("load", fetchAdminConfig);
     return out;
   };
 })();
+/* === Patch de UI: força item+Entregar na mesma linha e esconde "Avançar" === */
+(function adminFixLoop(){
+  function textEquals(el, wanted){
+    return (el.textContent || "").trim().toLowerCase() === wanted.toLowerCase();
+  }
+  function buildItemRows(cell){
+    if (!cell) return;
+    if (cell.querySelector(".item-row")) return; // já processado
+    const html = cell.innerHTML
+      .replace(/\n+/g," ")
+      .replace(/<\/?ul>|<\/?ol>|<\/?li>/gi,"")
+      .replace(/&nbsp;/g," ")
+      .trim();
+    const parts = html.split(/<br\s*\/?>/i).map(s => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    cell.innerHTML = "";
+    parts.forEach(p=>{
+      const row = document.createElement("div");
+      row.className = "item-row";
+      const span = document.createElement("span");
+      span.className = "item-text";
+      span.textContent = p.replace(/\s+/g," ").trim();
+      row.appendChild(span);
+      cell.appendChild(row);
+    });
+  }
+  function moveEntregarButtonsToItems(tr){
+    const tds = tr.querySelectorAll("td");
+    if (tds.length < 6) return;
+    const itemsCell = tds[2];
+    const actionsCell = tds[5];
+    if (!itemsCell || !actionsCell) return;
+
+    // marca colunas pra CSS
+    tds[0]?.classList.add("admin-col-id");
+    tds[1]?.classList.add("admin-col-mesa");
+    itemsCell.classList.add("items-col");
+    tds[3]?.classList.add("admin-col-tot");
+    tds[4]?.classList.add("admin-col-sta");
+    actionsCell.classList.add("admin-col-act","actions-cell");
+
+    // esconde "Avançar"
+    actionsCell.querySelectorAll("button, a").forEach(b=>{
+      if (textEquals(b,"avançar") || textEquals(b,"avancar")) b.style.display = "none";
+    });
+
+    // constrói linhas de item (se necessário)
+    buildItemRows(itemsCell);
+
+    // pega todos botões "Entregar" que estejam na célula de ações
+    const entregarBtns = Array.from(actionsCell.querySelectorAll("button, a"))
+      .filter(b => textEquals(b,"entregar"));
+
+    if (entregarBtns.length === 0) return;
+
+    const itemRows = Array.from(itemsCell.querySelectorAll(".item-row"));
+    // distribui 1:1; se sobrar, vai todos no último item
+    entregarBtns.forEach((btn, idx)=>{
+      btn.classList.add("btn-small","entregar-btn");
+      btn.style.display = ""; // garante visível
+      const target = itemRows[idx] || itemRows[itemRows.length-1];
+      if (target && !target.querySelector(".entregar-btn")){
+        target.appendChild(btn);
+      }else{
+        // se já tem, cria um clone "leve"
+        const clone = btn.cloneNode(true);
+        target.appendChild(clone);
+      }
+    });
+  }
+
+  function tick(){
+    try{
+      const table = document.querySelector("table");
+      if (!table) return;
+      table.classList.add("admin-table");
+      document.querySelectorAll("tbody tr").forEach(moveEntregarButtonsToItems);
+    }catch(e){ console.error("adminFixLoop:", e); }
+  }
+  setInterval(tick, 1200);
+  // roda uma vez já
+  document.addEventListener("DOMContentLoaded", tick);
+})();
