@@ -1,0 +1,7 @@
+﻿(function(){if(window.__miniTabs)return;window.__miniTabs=1;document.addEventListener("DOMContentLoaded",function(){var h=document.querySelector(".topbar h1,header h1,.header h1,h1");if(!h)return;var s=document.createElement("span");s.className="admin-tabs";
+var p=document.createElement("a");p.href="#";p.className="admin-tab active";p.textContent="Painel";
+var c=document.createElement("a");c.href="#";c.className="admin-tab";c.style.marginLeft="12px";c.textContent="Cardápio";
+function act(w){p.classList.toggle("active",w==="painel");c.classList.toggle("active",w==="cardapio")};
+p.onclick=function(e){e.preventDefault();act("painel");var ov=document.getElementById("cardapio-overlay");if(ov)ov.remove()};
+c.onclick=function(e){e.preventDefault();act("cardapio");if(!document.getElementById("cardapio-overlay")){var ov=document.createElement("div");ov.id="cardapio-overlay";ov.style="position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9998";var panel=document.createElement("div");panel.style="position:fixed;top:64px;left:50%;transform:translateX(-50%);width:min(980px,95vw);height:min(70vh,calc(100vh - 96px));background:#fff;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:16px;z-index:9999";panel.textContent="Editor de cardápio (em breve)";ov.appendChild(panel);ov.onclick=function(ev){if(ev.target===ov){act("painel");ov.remove()}};document.body.appendChild(ov)}};
+s.appendChild(p);s.appendChild(c);h.insertAdjacentElement("afterend",s)})})();
