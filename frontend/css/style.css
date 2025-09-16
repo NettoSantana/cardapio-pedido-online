@@ -842,3 +842,6 @@ a.top-link-painel, a.top-link-chamados, a.top-link-editar-cardapio { display:non
 .admin-tabs{margin-left:12px;display:inline-flex;gap:12px;vertical-align:middle}
 .admin-tab{font-weight:600;opacity:.7;text-decoration:none;border-bottom:2px solid transparent;padding:2px 0}
 .admin-tab.active{opacity:1;border-color:#0a58ca}
+.admin-tabs{margin-left:12px;display:inline-flex;gap:12px;vertical-align:middle}
+.admin-tab{font-weight:600;opacity:.7;text-decoration:none;border-bottom:2px solid transparent;padding:2px 0}
+.admin-tab.active{opacity:1;border-color:#0a58ca}
