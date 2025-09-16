@@ -510,3 +510,115 @@ async function loadHistory(){
     if (box) box.innerHTML = `<div class="history-empty">Falha ao carregar histórico. Tente novamente.</div>`;
   }
 }
+// === Abas por categoria ===
+(function(){
+  if (window.__catTabsInit) return; window.__catTabsInit = true;
+
+  function slugify(s){
+    return (s||"").toString().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+  }
+
+  function getHashCat(){
+    try{
+      const m = (location.hash||"").match(/cat=([^&]+)/);
+      return m? decodeURIComponent(m[1]) : "";
+    }catch(e){ return ""; }
+  }
+  function setHashCat(catId){
+    const other = (location.hash||"").replace(/(^#|cat=[^&]+&?|&$)/g,"").replace(/&&+/g,"&").replace(/^&|&$/g,"");
+    const h = "cat="+encodeURIComponent(catId);
+    location.hash = other ? "#"+h+"&"+other : "#"+h;
+  }
+
+  // cria as abas com base no menu carregado
+  async function ensureTabs(){
+    const el = document.getElementById("catTabs");
+    if (!el) return;
+    // pega o menu já carregado pelo app (ou busca)
+    let menu = window.__MENU_CACHE;
+    if (!menu){
+      const r = await fetch("/api/menu");
+      if (!r.ok) return;
+      menu = await r.json();
+      window.__MENU_CACHE = menu;
+    }
+    const cats = (menu && menu.categories)||[];
+    if (!cats.length) return;
+
+    // monta abas
+    el.innerHTML = "";
+    const allBtn = document.createElement("span");
+    allBtn.className = "tab";
+    allBtn.textContent = "Todos";
+    allBtn.dataset.cat = "";
+    el.appendChild(allBtn);
+
+    cats.sort((a,b)=> (a.order||0)-(b.order||0)).forEach(c=>{
+      const btn = document.createElement("span");
+      btn.className = "tab";
+      btn.textContent = c.name;
+      btn.dataset.cat = "cat-"+(c.id||slugify(c.name));
+      el.appendChild(btn);
+    });
+
+    // ativa de acordo com hash
+    const wanted = getHashCat();
+    setActive(wanted);
+
+    function setActive(cat){
+      el.querySelectorAll(".tab").forEach(b=>{
+        b.classList.toggle("active", (b.dataset.cat||"")===cat || (!cat && b.dataset.cat===""));
+      });
+    }
+
+    // comportamento: rolar para o anchor da categoria (ou mostrar todas)
+    el.addEventListener("click", (ev)=>{
+      const b = ev.target.closest(".tab");
+      if (!b) return;
+      const cat = b.dataset.cat||"";
+      setHashCat(cat);
+      setActive(cat);
+      if (!cat){
+        // todos: só sobe um pouco
+        window.scrollTo({top:0, behavior:"smooth"});
+      }else{
+        const anchor = document.getElementById(cat);
+        if (anchor) anchor.scrollIntoView({behavior:"smooth", block:"start"});
+      }
+    });
+
+    el.style.display = "block";
+  }
+
+  // marca âncoras nos títulos de categoria (client view)
+  function tagCategoryAnchors(){
+    // Procura por seções/títulos renderizados do cardápio
+    // Ajuste o seletor de acordo com seu HTML dos blocos do menu:
+    // Ex.: cada categoria renderiza um <h2 class="cat-title">Nome</h2>
+    const titles = document.querySelectorAll("[data-cat-id], .cat-title");
+    if (!titles.length) return;
+    titles.forEach(t=>{
+      const id = t.getAttribute("data-cat-id") || t.dataset.catId ||
+                 "cat-"+(t.getAttribute("data-id")||slugify(t.textContent));
+      t.id = id;                       // vira âncora
+      t.classList.add("cat-anchor");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", ()=>{
+    // pequena espera para o conteúdo do cardápio aparecer
+    setTimeout(()=>{ tagCategoryAnchors(); ensureTabs(); }, 200);
+  });
+
+  // se trocar o hash manualmente, realça a aba
+  window.addEventListener("hashchange", ()=>{
+    const el = document.getElementById("catTabs");
+    if (!el) return;
+    const wanted = getHashCat();
+    el.querySelectorAll(".tab").forEach(b=>{
+      b.classList.toggle("active", (b.dataset.cat||"")===wanted || (!wanted && b.dataset.cat===""));
+    });
+  });
+})();
