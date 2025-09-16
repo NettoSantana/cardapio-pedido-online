@@ -1,0 +1,7 @@
+﻿/* esconde o primeiro botão da coluna Ações (o "Avançar") */
+table td.actions .btn:first-child { display:none !important; }
+
+/* botão mini ao lado dos itens */
+.btn-mini { font-size: 12px; padding: 4px 8px; border-radius: 6px; border:0; background:#111; color:#fff; cursor:pointer; }
+.btn-mini[disabled] { opacity: .5; cursor: default; }
+li.item-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
