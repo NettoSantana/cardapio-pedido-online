@@ -1,4 +1,4 @@
-﻿(function InlinePerItemDelivery(){
+﻿(function PerItemInlineButtons(){
   function withAuth(path){
     const q = new URLSearchParams(location.search);
     const url = new URL(path, location.origin);
@@ -15,51 +15,49 @@
     return res.json();
   }
 
-  function fmtCurrency(n){ try{ return Number(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}catch{return "R$ "+(n||0);} }
-
   async function deliver(orderId, itemId, qty){
     const url = withAuth(`/api/orders/${orderId}/items/${itemId}/deliver`);
     const res = await fetch(url, {
       method: "PATCH",
       headers: { "Content-Type":"application/json", "Accept":"application/json" },
-      body: JSON.stringify({ qty: qty })
+      body: JSON.stringify({ qty })
     });
     if (!res.ok) throw new Error("HTTP "+res.status);
+    return res.json().catch(()=>null);
   }
 
-  function renderInline(row, order){
-    const cell = row.querySelector("td:nth-child(3)"); // coluna Itens
+  function wireRow(row, order){
+    // coluna "Itens" (3ª)
+    const cell = row.querySelector("td:nth-child(3)");
     if (!cell) return;
 
-    // limpa controles antigos
-    cell.querySelectorAll(".per-item-controls").forEach(x=>x.remove());
+    // lista existente
+    const ul = cell.querySelector("ul");
+    if (!ul) return;
 
-    const box = document.createElement("div");
-    box.className = "per-item-controls";
-    box.style.marginTop = "6px";
-    box.style.padding = "6px";
-    box.style.borderTop = "1px solid #eee";
-    box.innerHTML = "<strong>Entrega por item:</strong>";
+    // marca cada li pra layout lado-a-lado
+    const lis = [...ul.querySelectorAll("li")];
+    lis.forEach(li => li.classList.add("item-row"));
 
-    (order.items||[]).forEach(it=>{
-      const qty = Number(it.qty||0);
-      const dq  = Number(it.delivered_qty||0);
+    // remove botões antigos (se houver)
+    ul.querySelectorAll(".btn-mini, .per-item-right, .delivered-flag").forEach(x=>x.remove());
+
+    // pareia por índice: li[i] <-> order.items[i]
+    (order.items || []).forEach((it, i) => {
+      const li = lis[i];
+      if (!li) return;
+
+      const qty = Number(it.qty || 0);
+      const dq  = Number(it.delivered_qty || 0);
       const rem = Math.max(0, qty - dq);
 
-      const line = document.createElement("div");
-      line.style.display = "flex";
-      line.style.justifyContent = "space-between";
-      line.style.alignItems = "center";
-      line.style.gap = "8px";
-      line.style.fontSize = "0.9em";
-
-      const left = document.createElement("span");
-      left.textContent = `${it.name} — ${dq}/${qty}`;
-
+      // área à direita
       const right = document.createElement("span");
-      if (rem > 0){
+      right.className = "per-item-right";
+
+      if (rem > 0) {
         const btn = document.createElement("button");
-        btn.className = "btn";
+        btn.className = "btn-mini";
         btn.textContent = "Entregar";
         btn.onclick = async ()=>{
           btn.disabled = true;
@@ -69,35 +67,34 @@
         };
         right.appendChild(btn);
       } else {
-        const ok = document.createElement("span");
-        ok.textContent = "✔ Entregue";
-        ok.style.color = "#090";
-        right.appendChild(ok);
+        const flag = document.createElement("span");
+        flag.className = "delivered-flag";
+        flag.textContent = "✔";
+        flag.style.color = "#0a0";
+        right.appendChild(flag);
       }
 
-      line.appendChild(left);
-      line.appendChild(right);
-      box.appendChild(line);
+      // injeta na LI (fica ao lado por causa do display:flex do CSS)
+      li.appendChild(right);
     });
-
-    cell.appendChild(box);
   }
 
   async function hydrate(){
     try{
       const orders = await fetchOrders();
       const rows = document.querySelectorAll("table tbody tr");
-      (orders||[]).forEach((o, i)=>{
+      (orders || []).forEach((o, i) => {
         const row = rows[i];
-        if (row) renderInline(row, o);
+        if (row) wireRow(row, o);
       });
     }catch(e){
-      console.error("[inline-per-item] erro:", e);
+      console.error("[per-item-inline] erro:", e);
     }
   }
 
   function refresh(){ hydrate(); }
 
+  // primeira carga + refresh a cada 5s
   hydrate();
   setInterval(refresh, 5000);
 })();
