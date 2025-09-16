@@ -805,3 +805,5 @@ body > a:first-of-type + a,
 body > a:first-of-type + a + a { display:none !important; }
 /* some tudo que for <a> direto no topo do <body> */
 body > a { display:none !important; }
+/* Segurança: se alguém colocou anchors soltos no topo, some com eles */
+body > a, body > p:has(a) { display:none !important; }

@@ -53,6 +53,30 @@
     new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
   })();
   </script>
+  <script id="purge-preheader">
+  (function(){
+    function nukeBeforeFirstHeader(){
+      var body = document.body;
+      var header = document.querySelector('header');
+      if (!body || !header) return; // se algum dia não tiver header, não faz nada
+
+      // remove tudo que vem antes do PRIMEIRO <header>
+      while (body.firstElementChild && body.firstElementChild !== header){
+        body.firstElementChild.remove();
+      }
+      // se por acaso ainda existir algo antes do header, remove também
+      var n = header.previousElementSibling;
+      while (n){
+        var prev = n.previousElementSibling;
+        n.remove();
+        n = prev;
+      }
+    }
+    document.addEventListener('DOMContentLoaded', nukeBeforeFirstHeader);
+    // Se scripts de terceiros injetarem porcaria depois, limpa de novo
+    new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
+  })();
+  </script>
 </head>
 <body>
   <div id="app-admin"></div>
@@ -67,6 +91,7 @@
 </div>
 <script src="js/admin-tabs.js?v=20250916134701"></script>
 <script src="js/admin-chamados.js?v=20250916135033"></script>
+
 
 
 
