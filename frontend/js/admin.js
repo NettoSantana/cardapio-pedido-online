@@ -1083,3 +1083,57 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+/* --- hard kill of stray top links: Painel/Chamados/Editar Cardápio --- */
+(function(){
+  const targets = new Set([
+    "painel", "chamados", "editar cardápio", "editar cardapio",
+    "painel chamados editar cardápio", "painel chamados editar cardapio"
+  ]);
+
+  function shouldRemove(el){
+    // não mexe no botão oficial de chamados na appbar
+    if (el.id === "btn-alerts" || el.closest("#admin-appbar")) return false;
+
+    // só remove se estiver no topo (ex.: breadcrumb improvisado)
+    const rect = el.getBoundingClientRect();
+    if (rect.top > 150) return false;
+
+    const txt = (el.textContent || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!txt) return false;
+
+    // bate por item isolado ou linha inteira
+    if (targets.has(txt)) return true;
+
+    // se contem duas palavras-chave fortes, também remove
+    if (txt.includes("painel") && txt.includes("chamados")) return true;
+
+    return false;
+  }
+
+  function clean(){
+    // analisa só os primeiros N elementos do DOM para ser rápido
+    const nodes = document.querySelectorAll("body *");
+    let removed = 0;
+    for (let i = 0; i < nodes.length && i < 400; i++){
+      const el = nodes[i];
+      if (!(el instanceof HTMLElement)) continue;
+      if (shouldRemove(el)) {
+        el.remove();
+        removed++;
+      } else {
+        // pode ser um container com só texto
+        const onlyText = el.children.length === 0 && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3;
+        if (onlyText && shouldRemove(el)) { el.remove(); removed++; }
+      }
+    }
+    if (removed > 0) {
+      // se o pai ficou vazio, remove também
+      document.querySelectorAll("body *:empty").forEach(e=>{
+        if (e.getBoundingClientRect().top < 150 && !e.closest("#admin-appbar")) e.remove();
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", clean);
+  new MutationObserver(clean).observe(document.documentElement, { childList: true, subtree: true });
+})();
