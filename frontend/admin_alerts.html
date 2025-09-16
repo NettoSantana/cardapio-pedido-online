@@ -33,7 +33,13 @@
 
     async function fetchAlerts(){
       try{
-        const res = await fetch("/api/alerts", { headers: { "Accept":"application/json" } });
+        const q = new URLSearchParams(location.search);
+const url = new URL("/api/alerts", location.origin);
+for (const k of ["slug","u","p","dev"]) {
+  const v = (q.get(k) || "").trim();
+  if (v) url.searchParams.set(k, v);
+}
+const res = await fetch(url.toString(), { headers: { "Accept":"application/json" } });
         if(!res.ok) throw new Error("HTTP "+res.status);
         const data = await res.json();
         console.log("[alerts-debug] data:", data);
@@ -122,3 +128,4 @@
   </script>
 </body>
 </html>
+
