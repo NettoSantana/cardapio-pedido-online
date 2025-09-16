@@ -1,16 +1,7 @@
 ﻿import os
+import json
 import itertools
-from flask import Flask, send_from_directory, jsonify, request, abort
-
-
-# Caminhos
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-DB_DIR = os.path.join(BASE_DIR, "db")
-DATA_DIR = os.path.join(BASE_DIR, "data")
-ORDERS_FILE = os.path.join(DB_DIR, "orders.json")
-DEFAULT_SLUG = "bar-do-netto"
-
+from flask import Flask, send_from_directory, jsonify, request, abort, Response
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
@@ -473,3 +464,4 @@ def api_alerts_ack():
             x["ack_at"] = now_iso()
             return jsonify({"ok": True})
     return jsonify({"ok": False, "reason": "not_found_or_closed"}), 404
+
