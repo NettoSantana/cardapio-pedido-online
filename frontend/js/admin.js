@@ -529,3 +529,109 @@ async function fetchAdminConfig(){
   }catch(e){ console.warn("config", e); }
 }
 window.addEventListener("load", fetchAdminConfig);
+/* ======================== Alerts (garçom / fechar conta) ======================== */
+(function setupAlerts(){
+  const box   = document.getElementById("alertsBox");
+  const stat  = document.getElementById("alertsStatus");
+  const list  = document.getElementById("alertsList");
+  if (!box || !stat || !list) return; // admin sem bloco
+
+  let lastData = null;
+  let timer = null;
+
+  async function fetchAlerts(){
+    try{
+      const url = new URL("/api/alerts", location.origin);
+      url.searchParams.set("since", ""); // reservado
+      const res = await fetch(url, { headers: { "Accept":"application/json" }});
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      lastData = data;
+      renderAlerts(data);
+      stat.textContent = "Atualizado às " + new Date().toLocaleTimeString();
+    } catch(e){
+      console.error("[alerts] fail", e);
+      stat.textContent = "Falha ao carregar (ver console).";
+    }
+  }
+
+  function renderList(title, items, type){
+    const section = document.createElement("div");
+    const h = document.createElement("h3");
+    h.textContent = title;
+    h.style.margin = "12px 0 6px";
+    section.appendChild(h);
+
+    if (!items || !items.length) {
+      const p = document.createElement("div");
+      p.style.color = "#555";
+      p.textContent = "Nenhum";
+      section.appendChild(p);
+      return section;
+    }
+
+    const ul = document.createElement("ul");
+    ul.style.listStyle = "none";
+    ul.style.padding = "0";
+    ul.style.margin = "0";
+
+    items.forEach(it => {
+      const li = document.createElement("li");
+      li.className = "card";
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
+      li.style.alignItems = "center";
+      li.style.marginTop = "8px";
+
+      const left = document.createElement("div");
+      left.innerHTML = `<strong>Mesa:</strong> ${it.table_code} <span style="color:#555">(${type} • ${new Date(it.requested_at).toLocaleTimeString()})</span>`;
+      const right = document.createElement("div");
+
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = "Confirmar";
+      btn.onclick = () => ack(type, it.id, btn);
+
+      right.appendChild(btn);
+      li.appendChild(left);
+      li.appendChild(right);
+      ul.appendChild(li);
+    });
+
+    section.appendChild(ul);
+    return section;
+  }
+
+  function renderAlerts(data){
+    list.innerHTML = "";
+    list.appendChild(renderList("Chamadas de garçom", data.assist_calls || [], "assist"));
+    list.appendChild(renderList("Solicitações de fechar conta", data.close_requests || [], "close"));
+  }
+
+  async function ack(type, id, btn){
+    try{
+      btn.disabled = true;
+      const res = await fetch("/api/alerts/ack", {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "Accept":"application/json" },
+        body: JSON.stringify({ type, id })
+      });
+      const data = await res.json().catch(()=> ({}));
+      if (res.ok && data.ok) {
+        await fetchAlerts();
+      } else {
+        console.warn("[ack] fail", data);
+        alert("Não foi possível confirmar. Tente novamente.");
+      }
+    } catch(e){
+      console.error("[ack] err", e);
+      alert("Falha de rede. Tente novamente.");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // inicia o polling
+  fetchAlerts();
+  timer = setInterval(fetchAlerts, 5000);
+})();
