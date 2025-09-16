@@ -544,3 +544,4 @@ def admin_alerts_minimal():
     return send_from_directory(FRONTEND_DIR, "admin_alerts.html")
 
 
+
