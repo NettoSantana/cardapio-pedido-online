@@ -478,3 +478,4 @@ def admin_env_health():
     # mascara o usuário deixando só primeiros 2 chars
     masked_user = (user[:2] + "***") if user else ""
     return jsonify(ok=True, admin_user=masked_user, has_admin_pass=has_pass)
+
