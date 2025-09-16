@@ -488,3 +488,8 @@ def _auth_received():
 @app.get("/health/auth-received")
 def _auth_received():
     return jsonify(ok=bool(request.headers.get("Authorization")))
+
+@app.get("/health/auth-received", endpoint="auth_received_debug")
+def auth_received_debug():
+    return jsonify(ok=bool(request.headers.get("Authorization")))
+
