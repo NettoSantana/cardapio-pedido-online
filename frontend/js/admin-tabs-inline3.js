@@ -20,21 +20,25 @@
     document.body.appendChild(ov);
   }
 
-  function mount(){
-    // host = container do título/botão chamados
-    var host=null, badge=document.getElementById("alertsBadge");
-    if (badge) host = badge.parentElement;
-    if (!host){
-      var h1=document.querySelector(".topbar h1, header h1, .header h1, .appbar h1, h1");
-      host = h1 ? h1.parentElement : null;
-    }
-    if (!host || host.querySelector(".admin-tabs")) return false;
+  function hostEl(){
+    var badge=document.getElementById("alertsBadge");
+    if (badge && badge.parentElement) return badge.parentElement;
+    var h1=document.querySelector(".topbar h1, header h1, .header h1, .appbar h1, h1");
+    return h1 ? h1.parentElement : null;
+  }
 
-    var tabs=document.createElement("span"); tabs.className="admin-tabs";
+  function hasTabs(h){ return !!(h && h.querySelector && h.querySelector(".admin-tabs")); }
+
+  function mount(){
+    var host = hostEl();
+    if (!host || hasTabs(host)) return false;
+
+    var tabs=document.createElement("span"); tabs.className="admin-tabs"; tabs.setAttribute("data-persistent","1");
     var a1=document.createElement("a"); a1.className="admin-tab active"; a1.href="#"; a1.textContent="Painel";
     var a2=document.createElement("a"); a2.className="admin-tab"; a2.href="#"; a2.textContent="Cardápio";
     tabs.appendChild(a1); tabs.appendChild(a2);
 
+    var badge=document.getElementById("alertsBadge");
     if (badge) host.insertBefore(tabs, badge);
     else {
       var t = host.querySelector("h1,.title");
@@ -52,10 +56,19 @@
     return true;
   }
 
-  // tenta montar assim que possível (inclusive quando o H1 aparece depois)
-  var ok=false, tries=0, iv=setInterval(function(){
-    tries++; ok = mount() || ok;
-    if (ok || tries>30) clearInterval(iv);
-  }, 300);
+  // 1) Tenta montar quando o DOM fica pronto
   document.addEventListener("DOMContentLoaded", mount);
+
+  // 2) Tenta por polling leve (caso o topo apareça depois)
+  var tries=0, iv=setInterval(function(){
+    if (mount()) { clearInterval(iv); }
+    if (++tries>40) clearInterval(iv);
+  }, 250);
+
+  // 3) Observa mudanças no topo e remonta se as abas sumirem
+  var mo = new MutationObserver(function(){
+    var h = hostEl();
+    if (h && !hasTabs(h)) mount();
+  });
+  mo.observe(document.documentElement || document.body, {childList:true, subtree:true});
 })();
