@@ -410,3 +410,39 @@ async function requestClose(){
     setTimeout(()=> btn.disabled = false, 10000);
   }
 }
+/* === override: renderHistory (somente ENTREGUES + parcial) === */
+function renderHistory(data){
+  try{
+    const box = document.getElementById("history");
+    if (!box) return;
+
+    const orders  = (data && data.orders) || [];
+    const partial = Number((data && data.partial_total) || 0);
+
+    let html = "";
+    html += `<div class="history-head"><strong>Histórico (entregues)</strong> — Parcial: ${formataPreco(partial)}</div>`;
+
+    if (!orders.length){
+      html += `<div class="history-empty">Nenhum item entregue ainda.</div>`;
+    } else {
+      orders.forEach(o => {
+        html += `<div class="history-order">
+          <div class="h-row">
+            <span class="h-left">#${o.id} • ${(o.created_at||"").replace("T"," ").replace("Z","")}</span>
+            <span class="h-right">${formataPreco(o.total||0)}</span>
+          </div>`;
+        (o.items||[]).forEach(it => {
+          html += `<div class="h-item">
+            <span>${it.qty}× ${it.name}</span>
+            <span>${formataPreco(it.line_total||0)}</span>
+          </div>`;
+        });
+        html += `</div>`;
+      });
+    }
+
+    box.innerHTML = html;
+  } catch(e){
+    console.error("renderHistory error:", e);
+  }
+}

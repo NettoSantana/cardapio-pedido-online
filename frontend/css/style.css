@@ -576,3 +576,9 @@ a:hover { text-decoration: underline; }
 .btn[disabled]{ opacity:.6; cursor:not-allowed; }
 .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
   background:#111; color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,.15); z-index:9999; }
+/* histórico (entregues) */
+.history-head{margin:12px 0 8px;padding:8px 12px;background:#f4f6ff;border:1px solid #e3e8ff;border-radius:8px}
+.history-empty{color:#666;padding:6px 2px}
+.history-order{border:1px solid #eee;border-radius:8px;padding:10px;margin:10px 0}
+.h-row{display:flex;justify-content:space-between;margin-bottom:6px}
+.h-item{display:flex;justify-content:space-between;color:#444;padding:2px 0}
