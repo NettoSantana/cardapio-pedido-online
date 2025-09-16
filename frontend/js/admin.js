@@ -1173,3 +1173,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // roda algumas vezes para pegar injeções tardias
   var n=0, iv=setInterval(function(){ purge(); if(++n>20) clearInterval(iv); }, 300);
 })();
+(function(){
+  function killNavLinks(){
+    const re = /^(Painel|Chamados|Editar\s*Card[aá]pio)$/i;
+    document.querySelectorAll('a').forEach(a=>{
+      const t = (a.textContent||'').trim();
+      if(re.test(t)) { a.remove(); }
+    });
+  }
+  // roda ao carregar e sempre que o DOM mudar
+  document.addEventListener('DOMContentLoaded', killNavLinks);
+  new MutationObserver(killNavLinks).observe(document.documentElement, {childList:true, subtree:true});
+})();
