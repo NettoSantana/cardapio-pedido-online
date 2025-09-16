@@ -1070,3 +1070,16 @@ window.addEventListener("load", fetchAdminConfig);
     setInterval(pollAlerts, 5000);
   });
 })();
+/* --- strip inline admin links (hotfix) --- */
+document.addEventListener("DOMContentLoaded", () => {
+  const labels = new Set(["painel","chamados","editar cardápio","editar cardapio"]);
+  document.querySelectorAll("a").forEach(a => {
+    const t = (a.textContent || "").trim().toLowerCase();
+    if (labels.has(t)) {
+      const parent = a.parentElement;
+      a.remove();
+      // se o contêiner ficou vazio, remove também
+      if (parent && parent.children.length === 0) parent.remove();
+    }
+  });
+});
