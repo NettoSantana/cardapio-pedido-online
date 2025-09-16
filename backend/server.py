@@ -2,6 +2,10 @@
 import json
 import itertools
 from flask import Flask, send_from_directory, jsonify, request, abort, Response
+
+# Caminhos base
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
@@ -464,4 +468,5 @@ def api_alerts_ack():
             x["ack_at"] = now_iso()
             return jsonify({"ok": True})
     return jsonify({"ok": False, "reason": "not_found_or_closed"}), 404
+
 
