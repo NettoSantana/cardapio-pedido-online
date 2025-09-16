@@ -268,3 +268,145 @@ async function loadHistory() {
     setTimeout(loadHistory, 200);
   }
 })();
+/** =======================
+ *  Ações do cliente (MVP)
+ *  - Chamar Garçom  → POST /api/assist   { token | table_code }
+ *  - Fechar Conta   → POST /api/tabs/close-request { token | table_code }
+ * ======================= */
+
+(function ensureClientActions(){
+  // cria/garante container de ações
+  let actions = document.querySelector(".actions");
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.className = "actions";
+    const menu = document.getElementById("menu");
+    (menu?.parentElement || document.body).insertBefore(actions, menu || null);
+  }
+
+  // botão "Chamar Garçom"
+  let btnAssist = document.getElementById("btnAssist");
+  if (!btnAssist) {
+    btnAssist = document.createElement("button");
+    btnAssist.id = "btnAssist";
+    btnAssist.type = "button";
+    btnAssist.className = "btn btn-outline";
+    btnAssist.textContent = "Chamar garçom";
+    btnAssist.addEventListener("click", callWaiter);
+    actions.appendChild(btnAssist);
+  }
+
+  // botão "Fechar Conta"
+  let btnClose = document.getElementById("btnClose");
+  if (!btnClose) {
+    btnClose = document.createElement("button");
+    btnClose.id = "btnClose";
+    btnClose.type = "button";
+    btnClose.className = "btn";
+    btnClose.textContent = "Fechar conta";
+    btnClose.addEventListener("click", requestClose);
+    actions.appendChild(btnClose);
+  }
+})();
+
+/* ------- helpers ------- */
+function showToast(msg, ms=2500){
+  try {
+    const old = document.querySelector(".toast");
+    if (old) old.remove();
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(()=> t.remove(), ms);
+  } catch(e){ console.warn("[toast]", e); }
+}
+
+function getParam(name){
+  const url = new URL(location.href);
+  return (url.searchParams.get(name) || "").trim();
+}
+
+function getTableCode(){
+  // 1) token do QR (preferido): ?t=M01
+  const t = getParam("t");
+  if (t) return t;
+
+  // 2) tentar achar input de mesa no DOM
+  const candIds = ["table", "table_code", "mesa", "quarto"];
+  for (const id of candIds){
+    const el = document.getElementById(id);
+    if (el && el.value && el.value.trim()) return el.value.trim();
+  }
+  // 3) procurar genericamente por inputs com placeholder de mesa
+  const input = [...document.querySelectorAll("input")].find(i => {
+    const ph = (i.placeholder || "").toLowerCase();
+    return ph.includes("mesa") || ph.includes("quarto");
+  });
+  if (input?.value?.trim()) return input.value.trim();
+
+  return "";
+}
+
+/* ------- ações ------- */
+async function callWaiter(){
+  const table = getTableCode();
+  if (!table) { showToast("Informe a mesa/quarto para chamar o garçom."); return; }
+
+  const btn = document.getElementById("btnAssist");
+  btn.disabled = true;
+
+  try{
+    const res = await fetch("/api/assist", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "Accept":"application/json" },
+      body: JSON.stringify({ token: table })
+    });
+    const data = await res.json().catch(()=> ({}));
+    if (res.ok && data?.ok){
+      const cd = Number(data.cooldown || 60);
+      showToast("✅ Garçom chamado! Aguarde, já vão até você.");
+      // reabilita após cooldown
+      setTimeout(()=> btn.disabled = false, Math.max(3, cd) * 1000);
+    } else if (res.status === 429 && data?.reason === "cooldown") {
+      const retry = Number(data.retry_in || 30);
+      showToast(`⏳ Aguarde ${retry}s para chamar novamente.`);
+      setTimeout(()=> btn.disabled = false, Math.max(3, retry) * 1000);
+    } else {
+      btn.disabled = false;
+      showToast("Não foi possível chamar o garçom. Tente novamente.");
+    }
+  } catch(e){
+    console.error("[assist] failed", e);
+    btn.disabled = false;
+    showToast("Falha na rede. Tente novamente.");
+  }
+}
+
+async function requestClose(){
+  const table = getTableCode();
+  if (!table) { showToast("Informe a mesa/quarto para fechar a conta."); return; }
+
+  const btn = document.getElementById("btnClose");
+  btn.disabled = true;
+
+  try{
+    const res = await fetch("/api/tabs/close-request", {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "Accept":"application/json" },
+      body: JSON.stringify({ token: table })
+    });
+    const data = await res.json().catch(()=> ({}));
+    if (res.ok && data?.ok){
+      showToast("✅ Pedido de fechamento enviado. Em instantes iremos até você.");
+    } else {
+      showToast("Não foi possível solicitar fechamento. Tente novamente.");
+    }
+  } catch(e){
+    console.error("[close-request] failed", e);
+    showToast("Falha na rede. Tente novamente.");
+  } finally {
+    // reabilita em 10s para evitar spam
+    setTimeout(()=> btn.disabled = false, 10000);
+  }
+}
