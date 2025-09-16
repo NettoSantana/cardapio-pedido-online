@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Chamados (Debug)</title>
-  <link rel="stylesheet" href="css/style.css?v=20250916151521">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="site-header">
@@ -128,5 +128,4 @@ const res = await fetch(url.toString(), { headers: { "Accept":"application/json"
   </script>
 </body>
 </html>
-
 

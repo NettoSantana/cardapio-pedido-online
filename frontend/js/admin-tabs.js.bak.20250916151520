@@ -9,7 +9,10 @@
     nav.id = "admin-tabs";
     nav.className = "tabs";
     nav.innerHTML = `
-      `;
+      <a href="#painel"   data-tab="painel">Painel</a>
+      <a href="#chamados" data-tab="chamados">Chamados</a>
+      <a href="#menu"     data-tab="menu">Editar Cardápio</a>
+    `;
     document.body.prepend(nav);
     nav.addEventListener("click", (e)=>{
       const a = e.target.closest("a[data-tab]");
@@ -100,4 +103,3 @@
 
   window.addEventListener("hashchange", ()=>renderTab(currentTabFromHash()));
 })();
-

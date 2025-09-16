@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Painel de Pedidos</title>
+  <link rel="stylesheet" href="/css/style.css?v=20250913101102"/>
+  <style>
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:14px 0; }
+    .tabs { display:flex; gap:6px; }
+    .tab { padding:6px 10px; border:1px solid #ddd; border-radius:8px; cursor:pointer; background:#f7f7f7; }
+    .tab.active { background:#111; color:#fff; border-color:#111; }
+    .muted { color:#666; }
+    .inp { padding:7px 10px; border:1px solid #ddd; border-radius:8px; }
+    .btn { padding:7px 10px; border:0; border-radius:8px; background:#111; color:#fff; cursor:pointer; }
+    .btn.btn-sm { padding:5px 8px; }
+    .btn-outline { background:#fff; color:#111; border:1px solid #111; }
+    .pill { padding:4px 8px; border-radius:12px; background:#eee; text-transform:capitalize; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #eee; padding:10px; vertical-align:top; }
+    thead th { text-align:left; background:#fafafa; }
+    .hint { font-size:12px; color:#777; }
+    /* resumo de mesas */
+    .tabs-summary { margin: 18px 0; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap:12px; }
+    .card { border:1px solid #eee; border-radius:10px; padding:12px; background:#fff; }
+    .card h3 { margin:0 0 8px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; }
+    .badge.open { background:#ffe; border:1px solid #ddc; }
+    .badge.closed { background:#eef7ef; border:1px solid #cfe6d2; }
+    .card .row { display:flex; justify-content:space-between; margin:6px 0; }
+    .card .actions { margin-top:8px; }
+  </style>
+<link rel="icon" href="/img/favicon.jpg"><meta name="theme-color" content="#174A78"><link rel="icon" href="/img/favicon.jpg"><meta name="theme-color" content="#174A78"><link rel="icon" href="/img/favicon.jpg"><meta name="theme-color" content="#174A78">  <link rel="stylesheet" href="css/admin.css?v=1" />`r`n</head>
+<body><header class="site-header"><div class="container hdr"><img src="img/logo.jpg" alt="Logo" class="logo"><div class="brand"><div class="brand-name">Bar do Netto</div><div class="brand-sub">Painel de Pedidos</div></div></div></header>
+  <main class="container">
+    <h1>Painel de Pedidos</h1>
+    <div id="status" class="muted">Carregando…</div>
+
+    <div class="toolbar">
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-status="all">Todos</div>
+        <div class="tab" data-status="received">Recebidos</div>
+        <div class="tab" data-status="preparing">Preparando</div>
+        <div class="tab" data-status="delivering">Entregando</div>
+        <div class="tab" data-status="done">Concluídos</div>
+        <div class="tab" data-status="cancelled">Cancelados</div>
+      </div>
+
+      <select id="dateScope" class="inp">
+        <option value="today" selected>Hoje</option>
+        <option value="all">Todos os dias</option>
+      </select>
+
+      <input id="searchBox" class="inp" placeholder="Buscar (mesa M01, #123, item…)" />
+      <button id="btnReload" class="btn">Atualizar</button>
+        
+
+  <div class="toolbar">
+    <button id="btnExportToday" class="btn btn-outline">Exportar CSV (Hoje)</button>
+    <button id="btnExportAll" class="btn btn-outline">Exportar CSV (Todos)</button>
+  </div>
+
+    <!-- ============ APENAS 1 BLOCO DE MESAS DE HOJE ============ -->
+    <section class="tabs-summary">
+      <h2>Mesas de hoje</h2>
+      <div id="tablesGrid" class="grid">
+        <div class="card"><div class="muted">Carregando…</div></div>
+      </div>
+    </section>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Mesa</th>
+          <th>Itens</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="ordersTbody">
+        <tr><td colspan="6" class="muted">Carregando…</td></tr>
+      </tbody>
+    </table>
+
+    <p class="hint">Dica: use <b>?slug=</b> na URL para filtrar o tenant. Ex.: <code>/admin?slug=bar-do-netto</code></p>
+  </main>
+
+  <script src="/js/admin.js?v=20250916110801"></script>
+<script src="js/admin-alerts-widget.js?v=20250916085743"></script>
+<script src="js/admin-simple-tabs.js?v=20250916095404"></script>
+<script src="js/admin-keep-tabs.js?v=20250916100010"></script>
+<script src="js/admin-item-inline.js?v=20250916101917"></script>
+  <script src="js/admin-fix.js?v=20250916111340"></script>
+  <script src="js/admin-fix.js?v=20250916112535"></script>
+</body>
+</html>
+
+
+
+<!-- bloco de chamados -->
+<section id="alertsWidget" class="card" style="margin:12px 0;"></section>
