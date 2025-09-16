@@ -1137,3 +1137,39 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("DOMContentLoaded", clean);
   new MutationObserver(clean).observe(document.documentElement, { childList: true, subtree: true });
 })();
+
+/* === Kill stray top nav: "Painel | Chamados | Editar Cardápio" === */
+(function(){
+  if (window.__killTopNav) return; window.__killTopNav = true;
+
+  function textIs(el, s){
+    return el && (el.textContent||"").trim().toLowerCase() === s.toLowerCase();
+  }
+  function purge(){
+    try{
+      var labels = ["Painel","Chamados","Editar Cardápio","Editar Cardapio"];
+      var anchors = Array.from(document.querySelectorAll("a,button"));
+      anchors.forEach(function(a){
+        if (labels.some(lbl=>textIs(a,lbl))) {
+          // remove o link e espaços adjacentes
+          var prev = a.previousSibling, next = a.nextSibling;
+          a.remove();
+          if (prev && prev.nodeType===3) prev.textContent = "";
+          if (next && next.nodeType===3) next.textContent = "";
+        }
+      });
+      // Também: se sobrou um bloco só com esses textos no topo, remove
+      Array.from(document.body.children).forEach(function(el){
+        var t = (el.textContent||"").replace(/\s+/g," ").trim().toLowerCase();
+        if (!el.matches("header,*[role='banner']") &&
+            t && ["painel","chamados"].every(k=>t.includes(k)) &&
+            (t.includes("editar cardápio") || t.includes("editar cardapio"))) {
+          el.remove();
+        }
+      });
+    }catch(e){ console.error("killTopNav:", e); }
+  }
+  document.addEventListener("DOMContentLoaded", purge);
+  // roda algumas vezes para pegar injeções tardias
+  var n=0, iv=setInterval(function(){ purge(); if(++n>20) clearInterval(iv); }, 300);
+})();
