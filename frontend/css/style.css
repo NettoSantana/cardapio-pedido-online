@@ -787,3 +787,7 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 .actions{ position:sticky; bottom:0; background:#fff; padding:10px 0; }
 .btn{ padding:10px 14px; border:0; border-radius:8px; background:#0a58ca; color:#fff; cursor:pointer; }
 .btn-outline{ background:#fff; color:#0a58ca; border:1px solid #0a58ca; }
+/* --- abas admin --- */
+.tabs { display:flex; gap:8px; padding:10px 0; border-bottom:1px solid #eee; margin-bottom:12px; }
+.tabs a { padding:8px 12px; border-radius:8px; text-decoration:none; color:#111; }
+.tabs a.active { background:#e9f0ff; border:1px solid #bcd1ff; }
