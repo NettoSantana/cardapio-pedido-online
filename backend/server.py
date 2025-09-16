@@ -479,3 +479,4 @@ def admin_env_health():
     masked_user = (user[:2] + "***") if user else ""
     return jsonify(ok=True, admin_user=masked_user, has_admin_pass=has_pass)
 
+
