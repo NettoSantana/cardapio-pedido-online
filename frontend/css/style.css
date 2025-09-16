@@ -797,3 +797,8 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 .alert-card{ border:1px solid #eee; border-radius:10px; padding:10px 12px; background:#fff; }
 .alert-card .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .alert-card .actions .btn{ padding:6px 10px; border-radius:8px; }
+/* --- abas do admin --- */
+.admin-tabs{ position:sticky; top:0; background:#fff; z-index:5; display:flex; gap:8px; padding:10px 12px; border-bottom:1px solid #eee; }
+.admin-tabs .tab{ border:1px solid #ddd; background:#fff; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.admin-tabs .tab.active{ background:#0a58ca; color:#fff; border-color:#0a58ca; }
+.admin-view .card{ border:1px solid #eee; padding:12px; border-radius:10px; background:#fff; margin:12px 0; }
