@@ -761,3 +761,29 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
   background:#0d6efd; border-color:#0d6efd; color:#fff;
 }
 .cat-anchor{ scroll-margin-top: 64px; }
+/* ==== SEÇÕES (estilo iFood) ==== */
+.cat-title{
+  margin: 28px 0 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Lista vira “cards” simples */
+.item-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
+.item-row{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:14px;
+  padding:14px; border:1px solid #eee; border-radius:12px; background:#fff;
+}
+.item-row:hover{ box-shadow:0 2px 10px rgba(0,0,0,.04); }
+.item-left{ flex:1 1 auto; min-width:0; }
+.item-name{ font-weight:600; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.item-desc{ color:#555; font-size:13px; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.item-right{ flex:0 0 auto; white-space:nowrap; font-weight:700; }
+
+/* Estado indisponível */
+.item-off{ opacity:.55; }
+
+/* Ações (se você tiver botões “Adicionar” aí) */
+.actions{ position:sticky; bottom:0; background:#fff; padding:10px 0; }
+.btn{ padding:10px 14px; border:0; border-radius:8px; background:#0a58ca; color:#fff; cursor:pointer; }
+.btn-outline{ background:#fff; color:#0a58ca; border:1px solid #0a58ca; }
