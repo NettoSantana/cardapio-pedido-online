@@ -819,3 +819,81 @@ window.addEventListener("load", fetchAdminConfig);
   // roda uma vez já
   document.addEventListener("DOMContentLoaded", tick);
 })();
+/* === Patch de UI (idempotente) === */
+(function(){
+  if (window.__adminFixLoop) return; window.__adminFixLoop = true;
+
+  function textEq(el, wanted){
+    return (el.textContent||"").trim().toLowerCase() === wanted.toLowerCase();
+  }
+  function buildItemRows(cell){
+    if (!cell || cell.querySelector(".item-row")) return;
+    const raw = cell.innerHTML.replace(/\n+/g," ")
+      .replace(/<\/?ul>|<\/?ol>|<\/?li>/gi,"")
+      .replace(/&nbsp;/g," ").trim();
+    const parts = raw.split(/<br\s*\/?>/i).map(s=>s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    cell.innerHTML = "";
+    parts.forEach(p=>{
+      const row = document.createElement("div");
+      row.className = "item-row";
+      const t = document.createElement("span");
+      t.className = "item-text";
+      t.textContent = p.replace(/\s+/g," ").trim();
+      row.appendChild(t);
+      cell.appendChild(row);
+    });
+  }
+  function fixRow(tr){
+    const tds = tr.querySelectorAll("td");
+    if (tds.length < 6) return;
+    const items = tds[2], total = tds[3], status = tds[4], actions = tds[5];
+
+    tds[0]?.classList.add("admin-col-id");
+    tds[1]?.classList.add("admin-col-mesa");
+    items?.classList.add("items-col");
+    total?.classList.add("admin-col-tot");
+    status?.classList.add("admin-col-sta");
+    actions?.classList.add("admin-col-act","actions-cell");
+
+    // 1) esconder QUALQUER coisa que não seja Cancelar (ex.: Avançar)
+    actions.querySelectorAll("button, a").forEach(b=>{
+      const txt = (b.textContent||"").trim().toLowerCase();
+      if (txt !== "cancelar" && txt !== "entregar") b.style.display = "none";
+    });
+
+    // 2) construir linhas de itens se necessário
+    buildItemRows(items);
+
+    // 3) mover todos os "Entregar" da célula de ações para cada item
+    const entregarBtns = Array.from(actions.querySelectorAll("button, a"))
+      .filter(b => textEq(b,"entregar"));
+    if (!entregarBtns.length) return;
+
+    const rows = Array.from(items.querySelectorAll(".item-row"));
+    entregarBtns.forEach((btn, i)=>{
+      btn.classList.add("btn-small","entregar-btn");
+      btn.style.display = "";
+      const target = rows[i] || rows[rows.length-1];
+      if (!target) return;
+      // evita duplicar
+      if (!target.querySelector(".entregar-btn")) {
+        target.appendChild(btn);
+      } else {
+        const clone = btn.cloneNode(true);
+        target.appendChild(clone);
+      }
+    });
+  }
+
+  function tick(){
+    try{
+      const table = document.querySelector("table");
+      if (!table) return;
+      table.classList.add("admin-table");
+      document.querySelectorAll("tbody tr").forEach(fixRow);
+    }catch(e){ console.error("adminFixLoop:", e); }
+  }
+  document.addEventListener("DOMContentLoaded", tick);
+  setInterval(tick, 800);
+})();

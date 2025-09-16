@@ -625,3 +625,17 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 .btn-small{padding:4px 8px;font-size:12px;border-radius:6px;cursor:pointer}
 .btn-small.entregar-btn{border:1px solid #0a58ca;background:#fff;color:#0a58ca}
 .btn-small.entregar-btn:hover{background:#0a58ca;color:#fff}
+/* --- ADMIN layout harden --- */
+.admin-table { table-layout: fixed; width:100%; }
+.admin-table th, .admin-table td { vertical-align: top; }
+.admin-col-id{width:60px;white-space:nowrap}
+.admin-col-mesa{width:80px;white-space:nowrap}
+.admin-col-tot{width:120px;white-space:nowrap;text-align:right}
+.admin-col-sta{width:110px;white-space:nowrap}
+.admin-col-act{width:160px;white-space:nowrap}
+.items-col{display:flex;flex-direction:column;gap:6px;min-width:420px}
+.item-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.item-text{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-small{padding:2px 8px;line-height:1.2;border-radius:6px;cursor:pointer}
+.btn-small.entregar-btn{border:1px solid #0a58ca;background:#fff;color:#0a58ca}
+.btn-small.entregar-btn:hover{background:#0a58ca;color:#fff}
