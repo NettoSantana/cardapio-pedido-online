@@ -809,3 +809,6 @@ body > a { display:none !important; }
 body > a, body > p:has(a) { display:none !important; }
 /* esconder atalhos antigos no topo (fallback) */
 .admin-tabs, .top-links, .admin-shortcuts { display:none !important; }
+/* esconde quaisquer atalhos residuais no topo */
+#admin-tabs, .admin-tabs, .top-links, .admin-shortcuts { display:none !important; }
+a.top-link-painel, a.top-link-chamados, a.top-link-editar-cardapio { display:none !important; }

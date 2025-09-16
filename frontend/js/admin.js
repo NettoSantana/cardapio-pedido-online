@@ -1185,3 +1185,27 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener('DOMContentLoaded', killNavLinks);
   new MutationObserver(killNavLinks).observe(document.documentElement, {childList:true, subtree:true});
 })();
+
+/* kill stray top links: Painel | Chamados | Editar Cardápio */
+(function(){
+  if (window.__killTopLinks__) return; window.__killTopLinks__ = true;
+  function nukeLinks(){
+    try{
+      const killTxt = ["painel","chamados","editar cardapio","editar cardápio"];
+      // remove navs/containers conhecidos
+      document.querySelectorAll('#admin-tabs, .admin-tabs, .top-links, .admin-shortcuts').forEach(el=>el.remove());
+      // remove âncoras soltas
+      document.querySelectorAll('a').forEach(a=>{
+        const t = (a.textContent||"").trim().toLowerCase().replace(/\s+/g,' ');
+        if (killTxt.includes(t)){
+          const parent = a.parentElement;
+          a.remove();
+          if (parent && parent.children.length===0) parent.remove();
+        }
+      });
+    }catch(e){/* noop */}
+  }
+  document.addEventListener('DOMContentLoaded', nukeLinks);
+  // roda mais uma vez após 1s, caso algum script injete depois
+  setTimeout(nukeLinks, 1000);
+})();
