@@ -975,3 +975,35 @@ window.addEventListener("load", fetchAdminConfig);
   document.addEventListener("DOMContentLoaded", tick);
   setInterval(tick, 800);
 })();
+/* admin fix mini */
+(function(){
+  if (window.__fixMini) return; window.__fixMini = true;
+  function txt(e){return (e.textContent||"").trim().toLowerCase()}
+  function collect(cell){
+    const lis=cell.querySelectorAll("li");
+    if(lis.length) return Array.from(lis).map(li=>li.textContent.replace(/\s+/g," ").trim()).filter(Boolean);
+    return (cell.innerHTML||"").split(/<br\s*\/?>/i).map(s=>s.trim()).filter(Boolean);
+  }
+  function fixRow(tr){
+    const tds=tr.querySelectorAll("td"); if(tds.length<6) return;
+    const items=tds[2], tot=tds[3], sta=tds[4], act=tds[5];
+    tr.closest("table")?.classList.add("admin-table");
+    tds[0].classList.add("admin-col-id"); tds[1].classList.add("admin-col-mesa");
+    items.classList.add("items-col"); tot.classList.add("admin-col-tot");
+    sta.classList.add("admin-col-sta"); act.classList.add("admin-col-act");
+    act.querySelectorAll("button,a").forEach(b=>{ const t=txt(b); if(t!=="cancelar"&&t!=="entregar") b.style.display="none"; });
+    if(!items.querySelector(".item-row")){
+      const lines=collect(items); if(!lines.length) return;
+      items.innerHTML="";
+      lines.forEach(t=>{ const r=document.createElement("div"); r.className="item-row";
+        const s=document.createElement("span"); s.className="item-text"; s.textContent=t; r.appendChild(s); items.appendChild(r); });
+    }
+    const rows=items.querySelectorAll(".item-row");
+    Array.from(act.querySelectorAll("button,a")).filter(b=>txt(b)==="entregar").forEach((btn,i)=>{
+      btn.classList.add("btn-small","entregar-btn"); btn.style.display="";
+      const target=rows[i]||rows[rows.length-1]; if(target) target.appendChild(btn);
+    });
+  }
+  function tick(){ document.querySelectorAll("tbody tr").forEach(fixRow); }
+  document.addEventListener("DOMContentLoaded",tick); setInterval(tick,900);
+})();
