@@ -446,3 +446,67 @@ function renderHistory(data){
     console.error("renderHistory error:", e);
   }
 }
+/* === helpers robustos para slug/mesa + override do loadHistory === */
+function getSlug(){
+  // 1) ?slug=bar-do-netto
+  const u = new URL(location.href);
+  let s = (u.searchParams.get("slug") || "").trim();
+  if (s) return s;
+  // 2) /c/<slug>
+  const p = (location.pathname || "").replace(/^\/+|\/+$/g,"");
+  if (p.startsWith("c/")) return p.split("/")[1] || "";
+  // 3) fallback explícito
+  return "bar-do-netto";
+}
+
+function getTableFromUIOrToken(){
+  // token do QR: ?t=M02
+  const t = (new URL(location.href)).searchParams.get("t") || "";
+  if (t.trim()) return t.trim();
+  // inputs comuns
+  const ids = ["table","table_code","mesa","quarto"];
+  for (const id of ids){
+    const el = document.getElementById(id);
+    if (el && el.value && el.value.trim()) return el.value.trim();
+  }
+  // por placeholder genérico
+  const it = [...document.querySelectorAll("input")].find(i=>{
+    const ph = (i.placeholder||"").toLowerCase();
+    return ph.includes("mesa") || ph.includes("quarto");
+  });
+  if (it?.value?.trim()) return it.value.trim();
+  return "";
+}
+
+async function loadHistory(){
+  try{
+    const box = document.getElementById("history");
+    if (!box){ console.warn("[hist] #history não existe"); return; }
+
+    const slug  = getSlug();
+    const table = getTableFromUIOrToken();
+    if (!table){
+      box.innerHTML = `<div class="history-empty">Informe a mesa/quarto ou acesse pelo QR (com ?t=).</div>`;
+      return;
+    }
+
+    const url = new URL("/api/my-orders", location.origin);
+    url.searchParams.set("slug", slug);
+    url.searchParams.set("table", table);
+
+    console.log("[hist] GET", url.toString());
+    const res  = await fetch(url.toString(), { headers: { "Accept":"application/json" }});
+    if (!res.ok){
+      console.error("[hist] HTTP", res.status);
+      box.innerHTML = `<div class="history-empty">Erro ${res.status} ao carregar histórico.</div>`;
+      return;
+    }
+    const data = await res.json();
+    console.log("[hist] data", data);
+    renderHistory(data);
+  } catch(e){
+    console.error("[hist] fail", e);
+    const box = document.getElementById("history");
+    if (box) box.innerHTML = `<div class="history-empty">Falha ao carregar histórico. Tente novamente.</div>`;
+  }
+}
