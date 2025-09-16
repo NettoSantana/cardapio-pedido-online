@@ -519,3 +519,7 @@ def admin_debug():
 
 
 
+@app.get("/admin-alerts")
+@require_admin
+def admin_alerts_minimal():
+    return send_from_directory(FRONTEND_DIR, "admin_alerts.html")
