@@ -851,3 +851,33 @@ a.top-link-painel, a.top-link-chamados, a.top-link-editar-cardapio { display:non
 .admin-tabs{margin-left:12px;display:inline-flex;gap:12px;vertical-align:middle}
 .admin-tab{font-weight:600;opacity:.7;text-decoration:none;border-bottom:2px solid transparent;padding:2px 0}
 .admin-tab.active{opacity:1;border-color:#0a58ca}
+/* --- Tabs em estilo "pílula", como o botão Chamados --- */
+.admin-tabs{margin-left:12px; display:inline-flex; gap:8px; vertical-align:middle}
+
+.admin-tab,
+.admin-tab:link,
+.admin-tab:visited{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:9999px;
+  border:1px solid #d0d7de;
+  background:#fff;
+  color:#0a58ca;           /* azul do tema */
+  font-weight:600;
+  text-decoration:none !important;
+  line-height:1;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
+}
+
+.admin-tab:hover{ background:#f3f6ff; text-decoration:none !important; }
+
+.admin-tab.active{
+  background:#0d6efd;      /* azul cheio */
+  border-color:#0d6efd;
+  color:#fff !important;
+}
+
+.admin-tab.active:hover{ filter:brightness(.98); }
+
+/* garantir alinhamento com o título/badge */
+.topbar h1, header h1, .header h1, .appbar h1, h1{ display:inline-block; vertical-align:middle; }
