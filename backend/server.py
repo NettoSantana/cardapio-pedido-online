@@ -390,3 +390,87 @@ def get_config():
     return jsonify({
         "service_fee_pct": get_service_fee_pct()
     })
+
+# ===== Assist/Close Requests (MVP in-memory) =====
+import time
+ASSIST_CALLS = []            # {id, table_code, token, requested_at, status}
+CLOSE_REQUESTS = []          # {id, table_code, token, requested_at, status}
+ASSIST_ID_SEQ = itertools.count(1)
+CLOSE_REQ_ID_SEQ = itertools.count(1)
+LAST_ASSIST_BY_TABLE = {}    # table_code -> last_epoch
+
+def now_iso():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def get_assist_cooldown():
+    try:
+        return int(os.environ.get("ASSIST_COOLDOWN_SECONDS", "60"))
+    except Exception:
+        return 60
+
+def resolve_table_from_payload(payload):
+    # Usa table_code se vier explícito; senão tenta do token (MVP: token = mesa mesmo).
+    table_code = (payload.get("table_code") or "").strip() if isinstance(payload, dict) else ""
+    token = (payload.get("token") or "").strip() if isinstance(payload, dict) else ""
+    if not table_code and token:
+        table_code = token
+    return table_code, token
+
+@app.post("/api/assist")
+def api_assist():
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    table_code, token = resolve_table_from_payload(p)
+    if not table_code:
+        abort(400, "table_code ou token obrigatório")
+    now = time.time()
+    cooldown = get_assist_cooldown()
+    last = LAST_ASSIST_BY_TABLE.get(table_code, 0)
+    if now - last < cooldown:
+        remaining = int(cooldown - (now - last))
+        return jsonify({"ok": False, "reason": "cooldown", "retry_in": remaining}), 429
+    call_id = next(ASSIST_ID_SEQ)
+    item = {"id": call_id, "table_code": table_code, "token": token or None, "requested_at": now_iso(), "status": "open"}
+    ASSIST_CALLS.append(item)
+    LAST_ASSIST_BY_TABLE[table_code] = now
+    return jsonify({"ok": True, "assist_id": call_id, "cooldown": cooldown})
+
+# 3) POST /api/tabs/close-request (cliente pede para fechar a conta)
+@app.post("/api/tabs/close-request")
+def api_close_request():
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    table_code, token = resolve_table_from_payload(p)
+    if not table_code:
+        abort(400, "table_code ou token obrigatório")
+    req_id = next(CLOSE_REQ_ID_SEQ)
+    item = {"id": req_id, "table_code": table_code, "token": token or None, "requested_at": now_iso(), "status": "open"}
+    CLOSE_REQUESTS.append(item)
+    return jsonify({"ok": True, "request_id": req_id})
+
+@app.get("/api/alerts")
+@require_admin
+def api_alerts():
+    since = (request.args.get("since") or "").strip()
+    def filter_open(arr):
+        return [x for x in arr if x.get("status")=="open"]
+    return jsonify({"assist_calls": filter_open(ASSIST_CALLS), "close_requests": filter_open(CLOSE_REQUESTS), "now": now_iso()})
+
+# 5) POST /api/alerts/ack (admin) -> confirmar atendimento
+@app.post("/api/alerts/ack")
+@require_admin
+def api_alerts_ack():
+    if not request.is_json: abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    typ = (p.get("type") or "").strip()  # "assist" | "close"
+    rid = int(p.get("id") or 0)
+    if typ not in ("assist","close") or rid<=0: abort(400, "type/id inválidos")
+    arr = ASSIST_CALLS if typ=="assist" else CLOSE_REQUESTS
+    for x in arr:
+        if int(x.get("id")) == rid and x.get("status") == "open":
+            x["status"] = "ack"
+            x["ack_at"] = now_iso()
+            return jsonify({"ok": True})
+    return jsonify({"ok": False, "reason": "not_found_or_closed"}), 404
