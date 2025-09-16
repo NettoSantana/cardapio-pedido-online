@@ -214,7 +214,7 @@ def list_orders():
     orders = load_orders()
     if slug:
         orders = [o for o in orders if o.get("tenant_slug") == slug]
-    return jsonify(orders)
+    return jsonify([_normalize_order_items(o) for o in orders])
 
 # Público: criar pedido
 @app.post("/api/orders")
@@ -545,3 +545,74 @@ def admin_alerts_minimal():
 
 
 
+
+# --- normalize: garante delivered_qty nos itens ---
+def _normalize_order_items(order):
+    try:
+        for it in order.get("items", []):
+            if "delivered_qty" not in it:
+                it["delivered_qty"] = 0
+    except Exception:
+        pass
+    return order
+
+
+
+def _recompute_status(order):
+    # se cancelado, mantém
+    if (order.get("status") or "").lower() == "cancelled":
+        return order["status"]
+    items = order.get("items", [])
+    if not items:
+        order["status"] = "done"
+        return order["status"]
+    total_units = sum(int(i.get("qty",0)) for i in items)
+    delivered   = sum(int(i.get("delivered_qty",0)) for i in items)
+    if delivered <= 0:
+        # se estava "received", mantém; se estava "delivering" e tiraram, volta para received
+        order["status"] = "received"
+    elif delivered < total_units:
+        order["status"] = "delivering"
+    else:
+        order["status"] = "done"
+    return order["status"]
+
+@app.patch("/api/orders/<int:order_id>/items/<int:item_id>/deliver")
+@require_admin
+def deliver_item(order_id:int, item_id:int):
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    # qty a entregar: se não vier, entrega o restante
+    qty_req = int(p.get("qty", 0) or 0)
+
+    slug = (request.args.get("slug") or "").strip() or None
+    orders = load_orders()
+    found = None
+    for o in orders:
+        if o.get("id") == order_id and (not slug or o.get("tenant_slug") == slug):
+            _normalize_order_items(o)
+            for it in o.get("items", []):
+                if int(it.get("id")) == int(item_id):
+                    found = (o, it)
+                    break
+            break
+    if not found:
+        abort(404, "pedido/item não encontrado")
+
+    order, item = found
+    qty_total = int(item.get("qty", 0))
+    qty_deliv = int(item.get("delivered_qty", 0))
+    remaining = max(0, qty_total - qty_deliv)
+
+    if remaining <= 0:
+        return jsonify({"ok": True, "order": order})  # já entregue
+
+    deliver_now = remaining if qty_req <= 0 or qty_req > remaining else qty_req
+    item["delivered_qty"] = qty_deliv + deliver_now
+
+    # recomputa status do pedido
+    _recompute_status(order)
+
+    save_orders(orders)
+    return jsonify({"ok": True, "order": order, "delivered_item": {"id": item_id, "delivered_now": deliver_now, "remaining": qty_total - item["delivered_qty"]}})
