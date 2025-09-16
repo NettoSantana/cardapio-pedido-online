@@ -1,17 +1,18 @@
 ﻿import os
 import json
+import itertools
+from flask import Flask, send_from_directory, jsonify, request, abort, Response
 import base64
 from datetime import datetime
-from flask import Flask, send_from_directory, jsonify, request, abort, Response
 
-# Caminhos
+# Caminhos base
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-DB_DIR = os.path.join(BASE_DIR, "db")
-DATA_DIR = os.path.join(BASE_DIR, "data")
-ORDERS_FILE = os.path.join(DB_DIR, "orders.json")
-DEFAULT_SLUG = "bar-do-netto"
 
+DEFAULT_SLUG = "bar-do-netto"
+DATA_DIR = os.path.join(BASE_DIR, "db")
+DB_DIR = os.path.join(DATA_DIR, "json")
+ORDERS_FILE = os.path.join(DB_DIR, "orders.json")
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
@@ -21,32 +22,45 @@ app = Flask(
 # ===========================
 # Auth (HTTP Basic)
 # ===========================
-ADMIN_USER = os.environ.get("ADMIN_USER") or "admin"
-ADMIN_PASS = os.environ.get("ADMIN_PASS") or "changeme"
+ADMIN_USER = (os.environ.get("ADMIN_USER") or "admin").strip()
+ADMIN_PASS = (os.environ.get("ADMIN_PASS") or "changeme").strip()
 
 def _unauthorized():
-    # retorna 401 com cabeçalho para o navegador abrir prompt
     return Response(status=401, headers={"WWW-Authenticate": 'Basic realm="Admin"'})
 
-def _parse_basic_auth():
-    h = request.headers.get("Authorization", "")
-    if not h.lower().startswith("basic "):
-        return None, None
-    try:
-        raw = base64.b64decode(h.split(" ", 1)[1]).decode("utf-8")
-        user, pwd = raw.split(":", 1)
-        return user, pwd
-    except Exception:
-        return None, None
-
 def require_admin(fn):
-    # decorador para proteger rotas administrativas
     from functools import wraps
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        user, pwd = _parse_basic_auth()
-        if user == ADMIN_USER and pwd == ADMIN_PASS:
+        # 0) DEV bypass por query: ?dev=<ADMIN_USER>
+        try:
+            if (request.args.get("dev") or "").strip() == ADMIN_USER and ADMIN_USER:
+                return fn(*args, **kwargs)
+        except Exception:
+            pass
+
+        # 1) Query-string: ?u=<user>&p=<pass>
+        u = (request.args.get("u") or "").strip()
+        p = (request.args.get("p") or "").strip()
+        if u and p and u == ADMIN_USER and p == ADMIN_PASS:
             return fn(*args, **kwargs)
+
+        # 2) Basic Auth normal (navegador)
+        auth = request.authorization
+        if auth and (auth.username or '').strip() == ADMIN_USER and (auth.password or '').strip() == ADMIN_PASS:
+            return fn(*args, **kwargs)
+
+        # 3) Fallback: header Authorization manual (proxy)
+        h = request.headers.get('Authorization') or ''
+        if h.lower().startswith('basic '):
+            try:
+                decoded = base64.b64decode(h.split(' ',1)[1]).decode('utf-8')
+                uu, pp = decoded.split(':', 1)
+                if uu.strip() == ADMIN_USER and pp.strip() == ADMIN_PASS:
+                    return fn(*args, **kwargs)
+            except Exception:
+                pass
+
         return _unauthorized()
     return wrapper
 
@@ -75,10 +89,15 @@ def save_orders(orders):
         json.dump(orders, f, ensure_ascii=False, indent=2)
     os.replace(tmp, ORDERS_FILE)
 
-def next_order_id(orders):
-    return (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
+def _is_today_iso(iso):
+    try:
+        d = datetime.fromisoformat((iso or "").replace("Z",""))
+        now = datetime.utcnow()
+        return d.date() == now.date()
+    except Exception:
+        return False
 
-# ===== Fallback de cardápio (se arquivo faltar) =====
+# ===== Fallback de cardápio =====
 FALLBACK_MENU = {
     "tenant": {"slug": "bar-do-netto", "name": "Bar do Netto (fallback)", "open": True, "pix_key": None},
     "categories": [
@@ -149,7 +168,45 @@ def api_menu():
     menu = load_menu(slug)
     return jsonify(menu)
 
-# Admin-only
+# Histórico público da mesa (dia atual)
+@app.get("/api/my-orders")
+def my_orders_by_table():
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    table = (request.args.get("table") or "").strip()
+    if not table:
+        abort(400, "parâmetro 'table' é obrigatório")
+
+    orders = load_orders()
+    # filtra: tenant, mesa, HOJE e apenas ENTREGUES
+    data = [o for o in orders
+            if o.get("tenant_slug") == slug
+            and (o.get("table_code") or "").strip().lower() == table.lower()
+            and _is_today_iso(o.get("created_at"))
+            and (o.get("status") or "").lower() == "done"]
+
+    # ordena do mais recente para o mais antigo
+    def _key(o):
+        try:
+            return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
+        except Exception:
+            return datetime.min
+    data.sort(key=_key, reverse=True)
+
+    parcial = 0.0
+    slim = []
+    for o in data:
+        parcial += float(o.get("total") or 0)
+        slim.append({
+            "id": o.get("id"),
+            "created_at": o.get("created_at"),
+            "status": o.get("status"),
+            "total": o.get("total"),
+            "items": [{"name": it.get("name"), "qty": it.get("qty"), "line_total": it.get("line_total")} for it in (o.get("items") or [])]
+        })
+
+    return jsonify({"partial_total": parcial, "orders": slim})
+
+# Admin-only: listar pedidos
 @app.get("/api/orders")
 @require_admin
 def list_orders():
@@ -159,7 +216,7 @@ def list_orders():
         orders = [o for o in orders if o.get("tenant_slug") == slug]
     return jsonify(orders)
 
-# Público (clientes criam pedido)
+# Público: criar pedido
 @app.post("/api/orders")
 def create_order():
     slug = get_slug_from_request()
@@ -200,7 +257,7 @@ def create_order():
         })
 
     orders = load_orders()
-    order_id = next_order_id(orders)
+    order_id = (max((o.get("id", 0) for o in orders), default=0) + 1) if orders else 1
     order = {
         "id": order_id,
         "tenant_slug": slug,
@@ -212,53 +269,84 @@ def create_order():
         "service_fee": 0.0,
         "total": total,
         "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-    }
-        "closed": False,
+        "closed": False,  # <— importante para “Fechar conta”
     }
     orders.append(order)
     save_orders(orders)
     return jsonify({"order_id": order_id, "status": order["status"], "total": order["total"]}), 201
 
-@app.get("/api/my-orders")
-def my_orders_by_table():
+@app.get("/api/tabs/summary")
+@require_admin
+def tabs_summary():
     slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
-    table = (request.args.get("table") or "").strip()
-    if not table:
-        abort(400, "parâmetro 'table' é obrigatório")
+    orders = [o for o in load_orders() if o.get("tenant_slug") == slug and _is_today_iso(o.get("created_at"))]
+
+    tables = {}
+    for o in orders:
+        mesa = (o.get("table_code") or "-").strip()
+        t = tables.setdefault(mesa, {"table": mesa, "total": 0.0, "count": 0, "closed": True})
+        t["total"] += float(o.get("total") or 0)
+        t["count"] += 1
+        if not o.get("closed", False):
+            t["closed"] = False
+
+    result = sorted(tables.values(), key=lambda x: x["table"])
+    return jsonify(result)
+@app.get("/api/orders/export.csv")
+@require_admin
+def export_orders_csv():
+    import csv
+    from io import StringIO
+
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    scope = (request.args.get("scope") or "today").strip().lower()  # today|all
 
     orders = load_orders()
-    # filtra por tenant e mesa
-    data = [o for o in orders if o.get("tenant_slug") == slug and (o.get("table_code") or "").strip().lower() == table.lower()]
+    # filtra por tenant
+    orders = [o for o in orders if o.get("tenant_slug") == slug]
+    # escopo: só hoje por padrão
+    if scope != "all":
+        orders = [o for o in orders if _is_today_iso(o.get("created_at"))]
 
-    # (opcional) só de hoje - por padrão SIM (pode mudar depois)
-    def _is_today_iso(iso):
-        try:
-            d = datetime.fromisoformat((iso or "").replace("Z",""))
-            now = datetime.utcnow()
-            return d.date() == now.date()
-        except Exception:
-            return False
-    data = [o for o in data if _is_today_iso(o.get("created_at"))]
-
-    # ordena por data desc
+    # ordena por data
     def _key(o):
         try:
             return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
         except Exception:
             return datetime.min
-    data.sort(key=_key, reverse=True)
+    orders.sort(key=_key)
 
-    # resposta “enxuta”
-    slim = []
-    for o in data:
-        slim.append({
-            "id": o.get("id"),
-            "created_at": o.get("created_at"),
-            "status": o.get("status"),
-            "total": o.get("total"),
-            "items": [{"name": it.get("name"), "qty": it.get("qty"), "line_total": it.get("line_total")} for it in (o.get("items") or [])]
-        })
-    return jsonify(slim)
+    # monta CSV
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "id","created_at","table_code","customer_name","status",
+        "items_count","subtotal","service_fee","total","closed","items_compact"
+    ])
+    for o in orders:
+        items = o.get("items") or []
+        items_compact = " | ".join([f'{it.get("qty","")}x {it.get("name","")} (= {it.get("line_total",0)})' for it in items])
+        writer.writerow([
+            o.get("id",""),
+            o.get("created_at",""),
+            o.get("table_code",""),
+            o.get("customer_name",""),
+            o.get("status",""),
+            len(items),
+            o.get("subtotal",0),
+            o.get("service_fee",0),
+            o.get("total",0),
+            o.get("closed", False),
+            items_compact
+        ])
+
+    csv_data = buf.getvalue()
+    filename = f'orders_{slug}_{scope}.csv'
+    return Response(
+        csv_data,
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -282,5 +370,178 @@ def update_order(order_id: int):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
+@app.post("/api/tabs/close")
+@require_admin
+def tabs_close():
+    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
+    data = request.get_json(silent=True) or {}
+    table = (data.get("table") or "").strip()
+    if not table:
+        abort(400, "campo 'table' é obrigatório")
+
+    orders = load_orders()
+    total = 0.0
+    affected = []
+    for o in orders:
+        if o.get("tenant_slug") == slug and _is_today_iso(o.get("created_at")) and (o.get("table_code") or "").strip().lower() == table.lower():
+            total += float(o.get("total") or 0)
+            affected.append(o.get("id"))
+            o["closed"] = True
+
+    save_orders(orders)
+    return jsonify({
+        "table": table,
+        "slug": slug,
+        "closed": True,
+        "affected_ids": affected,
+        "orders_count": len(affected),
+        "total": total
+    })
+
+
+def get_service_fee_pct():
+    try:
+        return float(os.environ.get("SERVICE_FEE_PCT", "0") or 0.0)
+    except Exception:
+        return 0.0
+
+@app.get("/api/config")
+@require_admin
+def get_config():
+    return jsonify({
+        "service_fee_pct": get_service_fee_pct()
+    })
+
+# ===== Assist/Close Requests (MVP in-memory) =====
+import time
+ASSIST_CALLS = []            # {id, table_code, token, requested_at, status}
+CLOSE_REQUESTS = []          # {id, table_code, token, requested_at, status}
+ASSIST_ID_SEQ = itertools.count(1)
+CLOSE_REQ_ID_SEQ = itertools.count(1)
+LAST_ASSIST_BY_TABLE = {}    # table_code -> last_epoch
+
+def now_iso():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+def get_assist_cooldown():
+    try:
+        return int(os.environ.get("ASSIST_COOLDOWN_SECONDS", "60"))
+    except Exception:
+        return 60
+
+def resolve_table_from_payload(payload):
+    # Usa table_code se vier explícito; senão tenta do token (MVP: token = mesa mesmo).
+    table_code = (payload.get("table_code") or "").strip() if isinstance(payload, dict) else ""
+    token = (payload.get("token") or "").strip() if isinstance(payload, dict) else ""
+    if not table_code and token:
+        table_code = token
+    return table_code, token
+
+@app.post("/api/assist")
+def api_assist():
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    table_code, token = resolve_table_from_payload(p)
+    if not table_code:
+        abort(400, "table_code ou token obrigatório")
+    now = time.time()
+    cooldown = get_assist_cooldown()
+    last = LAST_ASSIST_BY_TABLE.get(table_code, 0)
+    if now - last < cooldown:
+        remaining = int(cooldown - (now - last))
+        return jsonify({"ok": False, "reason": "cooldown", "retry_in": remaining}), 429
+    call_id = next(ASSIST_ID_SEQ)
+    item = {"id": call_id, "table_code": table_code, "token": token or None, "requested_at": now_iso(), "status": "open"}
+    ASSIST_CALLS.append(item)
+    LAST_ASSIST_BY_TABLE[table_code] = now
+    return jsonify({"ok": True, "assist_id": call_id, "cooldown": cooldown})
+
+# 3) POST /api/tabs/close-request (cliente pede para fechar a conta)
+@app.post("/api/tabs/close-request")
+def api_close_request():
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    table_code, token = resolve_table_from_payload(p)
+    if not table_code:
+        abort(400, "table_code ou token obrigatório")
+    req_id = next(CLOSE_REQ_ID_SEQ)
+    item = {"id": req_id, "table_code": table_code, "token": token or None, "requested_at": now_iso(), "status": "open"}
+    CLOSE_REQUESTS.append(item)
+    return jsonify({"ok": True, "request_id": req_id})
+
+@app.get("/api/alerts")
+@require_admin
+def api_alerts():
+    since = (request.args.get("since") or "").strip()
+    def filter_open(arr):
+        return [x for x in arr if x.get("status")=="open"]
+    return jsonify({"assist_calls": filter_open(ASSIST_CALLS), "close_requests": filter_open(CLOSE_REQUESTS), "now": now_iso()})
+
+# 5) POST /api/alerts/ack (admin) -> confirmar atendimento
+@app.post("/api/alerts/ack")
+@require_admin
+def api_alerts_ack():
+    if not request.is_json: abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    typ = (p.get("type") or "").strip()  # "assist" | "close"
+    rid = int(p.get("id") or 0)
+    if typ not in ("assist","close") or rid<=0: abort(400, "type/id inválidos")
+    arr = ASSIST_CALLS if typ=="assist" else CLOSE_REQUESTS
+    for x in arr:
+        if int(x.get("id")) == rid and x.get("status") == "open":
+            x["status"] = "ack"
+            x["ack_at"] = now_iso()
+            return jsonify({"ok": True})
+    return jsonify({"ok": False, "reason": "not_found_or_closed"}), 404
+
+
+# ===== Debug admin env (temporário) =====
+@app.get("/health/admin-env")
+def admin_env_health():
+    user = (os.environ.get("ADMIN_USER") or "").strip()
+    has_pass = bool((os.environ.get("ADMIN_PASS") or "").strip())
+    # mascara o usuário deixando só primeiros 2 chars
+    masked_user = (user[:2] + "***") if user else ""
+    return jsonify(ok=True, admin_user=masked_user, has_admin_pass=has_pass)
+
+
+
+
+
+
+
+
+# ===== ROTA TEMPORÁRIA DE DEBUG (REMOVE DEPOIS) =====
+@app.get("/admin-debug")
+def admin_debug():
+    """
+    Acessa o admin sem BasicAuth quando ADMIN_AUTH_BYPASS=1
+    ou se ?dev=<ADMIN_USER> for passado — apenas DEBUG.
+    """
+    # segurança extra: permite só quando a variável de bypass estiver ativa
+    if (os.environ.get("ADMIN_AUTH_BYPASS") or "").strip() != "1":
+        # permitir também via ?dev=USER para caso queira
+        if request.args.get("dev", "").strip() != (os.environ.get("ADMIN_USER") or "").strip():
+            abort(401)
+
+    # slug obrigatório (como o admin normal)
+    slug = (request.args.get("slug") or "").strip()
+    if not slug:
+        abort(400, "slug é obrigatório")
+
+    # entrega o arquivo admin.html do frontend (mesma página do admin)
+    return send_from_directory(FRONTEND_DIR, "admin.html")
+
+
+
+
+@app.get("/admin-alerts")
+@require_admin
+def admin_alerts_minimal():
+    return send_from_directory(FRONTEND_DIR, "admin_alerts.html")
+
 
 
