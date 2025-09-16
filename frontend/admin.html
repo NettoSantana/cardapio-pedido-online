@@ -25,6 +25,34 @@
     new MutationObserver(nukeTopAnchors).observe(document.documentElement, {childList:true, subtree:true});
   })();
   </script>
+  <script id="nuke-top-links">
+  (function(){
+    // tenta reconhecer a appbar por vários seletores comuns
+    function getAppbar(){
+      return document.querySelector('#admin-appbar, .appbar, [data-appbar]');
+    }
+    function nukeBeforeAppbar(){
+      var bar = getAppbar();
+      if (!bar) return;
+      var body = document.body;
+      // enquanto o primeiro filho do body NÃO for a appbar, remove-o
+      while (body.firstElementChild && body.firstElementChild !== bar){
+        body.firstElementChild.remove();
+      }
+      // se por algum motivo a appbar não for o primeiro, mas existir algo antes dela, remove tudo até ela
+      if (bar && bar.previousElementSibling){
+        var node = bar.previousElementSibling;
+        while(node){
+          var prev = node.previousElementSibling;
+          node.remove();
+          node = prev;
+        }
+      }
+    }
+    document.addEventListener('DOMContentLoaded', nukeBeforeAppbar);
+    new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
+  })();
+  </script>
 </head>
 <body>
   <div id="app-admin"></div>
@@ -39,6 +67,8 @@
 </div>
 <script src="js/admin-tabs.js?v=20250916134701"></script>
 <script src="js/admin-chamados.js?v=20250916135033"></script>
+
+
 
 
 

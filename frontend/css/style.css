@@ -803,3 +803,5 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 body > a:first-of-type,
 body > a:first-of-type + a,
 body > a:first-of-type + a + a { display:none !important; }
+/* some tudo que for <a> direto no topo do <body> */
+body > a { display:none !important; }
