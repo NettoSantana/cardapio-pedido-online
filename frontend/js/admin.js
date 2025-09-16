@@ -1007,3 +1007,66 @@ window.addEventListener("load", fetchAdminConfig);
   function tick(){ document.querySelectorAll("tbody tr").forEach(fixRow); }
   document.addEventListener("DOMContentLoaded",tick); setInterval(tick,900);
 })();
+// === Alertas com som (idempotente) ===
+(function(){
+  if (window.__alertsSoundInit) return; window.__alertsSoundInit = true;
+
+  // cria/garante badge no topo (ao lado do título "Painel de Pedidos")
+  function ensureAlertsBadge(){
+    const h1 = document.querySelector("h1, .page-title, .header-brand") || document.body;
+    if (!document.getElementById("alertsBadgeWrap")){
+      const wrap = document.createElement("span");
+      wrap.id = "alertsBadgeWrap";
+      wrap.style.marginLeft = "8px";
+      wrap.innerHTML = '<span id="alertsBadge" class="badge-alert" style="display:none">0</span>';
+      // se existir .header-brand, põe dentro; senão, após o primeiro h1
+      const tgt = document.querySelector(".header-brand") || document.querySelector("h1");
+      if (tgt) tgt.appendChild(wrap); else document.body.prepend(wrap);
+    }
+  }
+
+  // beep simples via WebAudio (sem arquivo)
+  function playDing(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = 880; // Lá
+      o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      o.start(); o.stop(ctx.currentTime + 0.2);
+    }catch(e){}
+  }
+
+  let lastCount = 0;
+  async function pollAlerts(){
+    try{
+      ensureAlertsBadge();
+      const r = await fetch("/api/alerts", {headers:{Accept:"application/json"}});
+      if (!r.ok) return;
+      const j = await r.json();
+      const openAssist = (j.assist_calls||[]).length;
+      const openClose  = (j.close_requests||[]).length;
+      const total = openAssist + openClose;
+
+      const b = document.getElementById("alertsBadge");
+      if (b){
+        b.textContent = String(total);
+        b.style.display = total>0 ? "inline-block" : "none";
+      }
+
+      // toca som apenas quando a contagem AUMENTA
+      if (total > lastCount) playDing();
+      lastCount = total;
+    }catch(e){ /* silencia */ }
+  }
+
+  // inicia
+  document.addEventListener("DOMContentLoaded", ()=>{
+    ensureAlertsBadge();
+    pollAlerts();
+    setInterval(pollAlerts, 5000);
+  });
+})();

@@ -690,3 +690,30 @@ table th, table td { vertical-align: top; }  /* colunas no topo */
 .admin-col-total{width:120px;white-space:nowrap;text-align:right}
 .admin-col-status{width:110px;white-space:nowrap}
 .admin-col-acoes{width:160px;white-space:nowrap}
+/* --- Branding + botões --- */
+:root{
+  --brand-bg:#0d6efd;      /* azul da barra (ajuste se quiser) */
+  --brand-text:#ffffff;
+  --brand-accent:#0b5ed7;  /* hover/escuro */
+  --ok-green:#2e7d32;      /* "Entregue" */
+}
+
+.header-brand{
+  background:var(--brand-bg);
+  color:var(--brand-text);
+  display:flex; align-items:center; gap:10px;
+  padding:10px 14px; border-radius:10px; margin-bottom:16px;
+}
+.header-brand img{ height:24px; width:auto; display:block; }
+.header-brand .title{ font-weight:700; }
+
+.btn-entregar{ padding:4px 10px; border-radius:6px; border:1px solid transparent;
+  background:var(--brand-bg); color:#fff; cursor:pointer; }
+.btn-entregar:hover{ background:var(--brand-accent); }
+
+.item-ok, .tag-entregue{ color:var(--ok-green); font-weight:600; }
+
+.badge-alert{
+  display:inline-block; min-width:20px; padding:2px 6px; border-radius:999px;
+  background:#dc3545; color:#fff; font-size:12px; text-align:center;
+}
