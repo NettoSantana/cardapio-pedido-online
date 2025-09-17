@@ -1,0 +1,170 @@
+﻿{
+    "tenant":  {
+                   "pix_key":  null,
+                   "name":  "Bar do Netto",
+                   "slug":  "bar-do-netto",
+                   "open":  true
+               },
+    "categories":  [
+                       {
+                           "id":  1,
+                           "name":  "Bebidas alcoólicas",
+                           "order":  1,
+                           "active":  true,
+                           "items":  [
+                                         {
+                                             "id":  1,
+                                             "name":  "Cerveja Long Neck",
+                                             "desc":  "Pilsen gelada",
+                                             "price":  12,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  2,
+                                             "name":  "Caipirinha",
+                                             "desc":  "Cachaça, limão e açúcar",
+                                             "price":  18,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  9,
+                                             "name":  "Cerveja Long Neck",
+                                             "desc":  "Pilsen gelada",
+                                             "price":  12,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  10,
+                                             "name":  "Caipirinha",
+                                             "desc":  "Cachaça, limão e açúcar",
+                                             "price":  18,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         }
+                                     ]
+                       },
+                       {
+                           "id":  2,
+                           "name":  "Bebidas não alcoólicas",
+                           "order":  2,
+                           "active":  true,
+                           "items":  [
+                                         {
+                                             "id":  3,
+                                             "name":  "Água 500ml",
+                                             "desc":  "Sem gás",
+                                             "price":  4,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  4,
+                                             "name":  "Refrigerante lata",
+                                             "desc":  "Coca, Guaraná ou Sprite",
+                                             "price":  7,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  11,
+                                             "name":  "Água 500ml",
+                                             "desc":  "Sem gás",
+                                             "price":  4,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  12,
+                                             "name":  "Refrigerante lata",
+                                             "desc":  "Coca, Guaraná ou Sprite",
+                                             "price":  7,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         }
+                                     ]
+                       },
+                       {
+                           "id":  3,
+                           "name":  "Petiscos",
+                           "order":  3,
+                           "active":  true,
+                           "items":  [
+                                         {
+                                             "id":  5,
+                                             "name":  "Batata Frita",
+                                             "desc":  "300g crocante",
+                                             "price":  24,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  6,
+                                             "name":  "Frango à Passarinho",
+                                             "desc":  "400g temperado",
+                                             "price":  38,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  13,
+                                             "name":  "Batata Frita",
+                                             "desc":  "300g crocante",
+                                             "price":  24,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  14,
+                                             "name":  "Frango à Passarinho",
+                                             "desc":  "400g temperado",
+                                             "price":  38,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         }
+                                     ]
+                       },
+                       {
+                           "id":  4,
+                           "name":  "Refeições",
+                           "order":  4,
+                           "active":  true,
+                           "items":  [
+                                         {
+                                             "id":  7,
+                                             "name":  "Picanha na chapa",
+                                             "desc":  "Serve 2 pessoas",
+                                             "price":  89,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  8,
+                                             "name":  "Parmegiana",
+                                             "desc":  "Bovina com molho e queijo",
+                                             "price":  64,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  15,
+                                             "name":  "Picanha na chapa",
+                                             "desc":  "Serve 2 pessoas",
+                                             "price":  89,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         },
+                                         {
+                                             "id":  16,
+                                             "name":  "Parmegiana",
+                                             "desc":  "Bovina com molho e queijo",
+                                             "price":  64,
+                                             "photo_url":  null,
+                                             "available":  true
+                                         }
+                                     ]
+                       }
+                   ]
+}

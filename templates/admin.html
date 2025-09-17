@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin — Editor de Cardápio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1115; --surface:#151924; --muted:#23293a; --muted-2:#1b2030;
+      --text:#e8eaf1; --text-2:#9aa4bd; --primary:#5b8cff; --danger:#ff5b74; --ok:#3ecf8e; --warn:#f7b955;
+      --border:#2a3146; --shadow:0 8px 24px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial}
+    .topbar{
+      position:sticky; top:0; z-index:10; display:flex; gap:8px; align-items:center; padding:12px 16px;
+      background:linear-gradient(180deg, rgba(21,25,36,.98), rgba(21,25,36,.92)); border-bottom:1px solid var(--border);
+    }
+    .topbar .title{font-weight:600;margin-right:12px}
+    .btn{padding:8px 12px;border:1px solid var(--border);background:var(--muted);color:var(--text);border-radius:8px;cursor:pointer}
+    .btn.primary{background:var(--primary);border-color:#3e6ef5;color:#fff}
+    .btn.ok{background:var(--ok);border-color:#26b874;color:#08130f}
+    .btn.warn{background:var(--warn);border-color:#d79a1e;color:#1c1405}
+    .btn.danger{background:var(--danger);border-color:#db3b57}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .spacer{flex:1}
+    .seg{display:flex;gap:8px}
+    .filters{display:flex;gap:8px;align-items:center;margin-left:8px}
+    .select,.input{
+      padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--muted-2);color:var(--text)
+    }
+    .wrap{display:flex; height:calc(100% - 56px)}
+    .list{
+      flex:1; padding:12px 16px; overflow:auto;
+    }
+    .table{
+      width:100%; border-collapse:separate; border-spacing:0 8px;
+    }
+    .thead{color:var(--text-2); font-size:12px; text-transform:uppercase; letter-spacing:.06em}
+    .row{
+      background:var(--surface); border:1px solid var(--border); box-shadow:var(--shadow); border-radius:10px;
+    }
+    .row td{padding:10px 12px; vertical-align:middle}
+    .row .type{font-weight:600}
+    .badge{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid var(--border);background:var(--muted-2);color:var(--text-2)}
+    .row.selected{outline:2px solid var(--primary)}
+    .draghandle{cursor:grab;opacity:.7}
+    .status-Disponível{color:#85ffa8}
+    .status-Oculto{color:#ffc46c}
+    .status-Indisponível{color:#ff8080}
+    /* Drawer */
+    .drawer{width:0;max-width:560px;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);transition:width .2s ease;overflow:hidden;display:flex;flex-direction:column;}
+    .drawer.open{width:min(100%, 520px)}
+    /* ... resto do CSS, body, forms, footer ... */
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="title">Editor de Cardápio</div>
+    <div class="seg">
+      <button class="btn" id="btnAdd">Adicionar</button>
+      <button class="btn" id="btnEdit" disabled>Editar</button>
+      <button class="btn danger" id="btnDelete" disabled>Excluir</button>
+      <button class="btn" id="btnDuplicate" disabled>Duplicar</button>
+      <button class="btn warn" id="btnReorder">Reordenar</button>
+      <button class="btn ok" id="btnPublish">Publicar</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="filters">
+      <select class="select" id="filterType"><option value="all">Todos</option><option value="item">Itens</option><option value="categoria">Categorias</option></select>
+      <input class="input" id="search" placeholder="Buscar por nome/tag..." />
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="list"><table class="table" id="grid"><thead class="thead"><tr><th></th><th>Tipo</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Status</th><th>Ordem</th></tr></thead><tbody id="gridBody"></tbody></table></div>
+    <aside class="drawer" id="drawer"> <!-- drawer aqui --> </aside>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

@@ -1,1 +1,1 @@
-﻿fix(admin): remove seções duplicadas 'Mesas de hoje' e mantém uma única (v=20250913071548)
+﻿chore(admin): remove links Painel, Chamados e Editar Cardápio da barra superior
