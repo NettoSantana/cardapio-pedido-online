@@ -1,1 +1,4 @@
-﻿chore(admin): remove links Painel, Chamados e Editar Cardápio da barra superior
+﻿feat(admin): editor de cardápio via terminal
+
+- Novo layout admin.html
+- JS inicial (CRUD + toast)
