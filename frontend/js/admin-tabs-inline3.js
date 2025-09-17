@@ -549,3 +549,50 @@ if (typeof window.onRemoveItem !== "function") {
   document.addEventListener("DOMContentLoaded", ensureButtons);
   window.addEventListener("focus", ensureButtons);
 })();
+(function(){
+  function H(){ return document.getElementById("cardapio-head"); }
+  function ED(){ return document.getElementById("cardapio-editor"); }
+  function J(){ try{ return JSON.parse(ED().value||"{}"); }catch(e){ alert("JSON inválido"); throw e; } }
+  function P(o){ return JSON.stringify(o,null,2); }
+
+  if (typeof window.onRemoveItem!=="function"){
+    window.onRemoveItem=function(){
+      var m=J(), cs=m.categories||[]; if(!cs.length){alert("Sem categorias");return;}
+      var cid=prompt("Categoria (ID):", cs[0].id); if(!cid) return;
+      var c=cs.find(x=>String(x.id)===String(cid)); if(!c){alert("Cat não encontrada");return;}
+      var its=c.items||[]; if(!its.length){alert("Sem itens nessa categoria");return;}
+      var iid=prompt("Item (ID):", its[0].id); if(!iid) return;
+      var b=its.length; c.items=its.filter(it=>String(it.id)!==String(iid));
+      if(c.items.length===b){alert("Item não encontrado");return;}
+      ED().value=P(m);
+    };
+  }
+
+  if (typeof window.onRemoveCategory!=="function"){
+    window.onRemoveCategory=function(){
+      var m=J(), cs=m.categories||[]; if(!cs.length){alert("Sem categorias");return;}
+      var cid=prompt("Remover categoria (ID):", cs[0].id); if(!cid) return;
+      var b=cs.length; m.categories = cs.filter(x=>String(x.id)!==String(cid));
+      if(m.categories.length===b){alert("Categoria não encontrada");return;}
+      ED().value=P(m);
+    };
+  }
+
+  function ensureButtons(){
+    var h=H(); if(!h) return;
+    function up(id,txt,fn,beforeId){
+      var b=h.querySelector("#"+id);
+      if(!b){ b=document.createElement("button"); b.id=id; b.textContent=txt; b.style.marginRight="8px";
+        var ref=beforeId && h.querySelector("#"+beforeId); ref? h.insertBefore(b,ref):h.appendChild(b);
+      }
+      if(fn && !b.__bound){ b.addEventListener("click",fn); b.__bound=1; }
+    }
+    up("btn-remove-item","Remover item",window.onRemoveItem,"btn-save");
+    up("btn-remove-cat","Remover categoria",window.onRemoveCategory,"btn-save");
+  }
+
+  // cria ao abrir o overlay e mantém se o DOM trocar
+  var iv=setInterval(ensureButtons,400);
+  document.addEventListener("DOMContentLoaded", ensureButtons);
+  window.addEventListener("focus", ensureButtons);
+})();
