@@ -766,3 +766,25 @@ def deliver_item(order_id:int, item_id:int):
 # ===== MAIN =====
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+
+# ===== Persistência do cardápio (CRUD mínimo) =====
+def save_menu(slug: str, menu: dict):
+    path = os.path.join(DATA_DIR, slug, "menu.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(menu, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+@app.post("/api/menu/save")
+@require_admin
+def api_menu_save():
+    slug = get_slug_from_request()
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    payload = request.get_json(silent=True) or {}
+    # valida estrutura básica
+    if not isinstance(payload.get("categories", []), list):
+        abort(400, "categories deve ser lista")
+    save_menu(slug, payload)
+    return jsonify({"ok": True})

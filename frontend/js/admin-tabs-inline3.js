@@ -51,7 +51,7 @@
     });
     a2.addEventListener("click",function(e){
       e.preventDefault(); a2.classList.add("active"); a1.classList.remove("active");
-      ensureOverlay(); document.getElementById("cardapio-overlay").style.display="block";
+      try{ openMenuEditor(); }catch(e){ console.error(e); }
     });
     return true;
   }
