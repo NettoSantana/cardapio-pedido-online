@@ -1,7 +1,7 @@
 ﻿(function(){
-  if (window.__nettabs_v3) return; window.__nettabs_v3 = 1;
+  if (window.__nettabs_v4) return; window.__nettabs_v4 = 1;
 
-  var tabs, aPainel, aCardapio, bodyEl;
+  var tabs, aPainel, aCardapio, bodyEl, currentMenu=null, slug=null;
 
   function ensureOverlay(){
     var ov = document.getElementById("cardapio-overlay");
@@ -18,25 +18,40 @@
       boxShadow:"0 10px 30px rgba(0,0,0,.2)",zIndex:"9999",display:"flex",flexDirection:"column",overflow:"hidden"});
 
     var head=document.createElement("div");
-    Object.assign(head.style,{display:"flex",justifyContent:"space-between",alignItems:"center",
+    Object.assign(head.style,{display:"flex",gap:"8px",alignItems:"center",
       padding:"12px 16px",borderBottom:"1px solid #eee"});
 
-    var strong=document.createElement("strong"); strong.textContent="Editar Cardápio";
-    var btn=document.createElement("button"); btn.textContent="Fechar";
-    Object.assign(btn.style,{border:"0",background:"#eee",borderRadius:"8px",padding:"6px 10px",cursor:"pointer"});
-    btn.addEventListener("click", function(){ hideOverlay(); setActive("painel"); });
+    var title=document.createElement("strong"); title.textContent="Editar Cardápio";
+    var btnAddCat=button("Adicionar categoria", onAddCategory);
+    var btnAddItem=button("Adicionar item", onAddItem);
+    var btnSave=button("Salvar", onSave); btnSave.style.background="#0a58ca"; btnSave.style.color="#fff";
+    var btnClose=button("Fechar", function(){ hideOverlay(); setActive("painel"); });
 
     bodyEl=document.createElement("div"); bodyEl.id="cardapio-body";
-    Object.assign(bodyEl.style,{flex:"1",overflow:"auto",padding:"16px"});
+    Object.assign(bodyEl.style,{flex:"1",overflow:"auto",padding:"0"});
 
-    head.appendChild(strong); head.appendChild(btn);
+    head.appendChild(title);
+    head.appendChild(btnAddCat);
+    head.appendChild(btnAddItem);
+    head.appendChild(btnSave);
+    head.appendChild(btnClose);
     panel.appendChild(head); panel.appendChild(bodyEl); ov.appendChild(panel);
     ov.addEventListener("click", function(e){ if(e.target===ov){ hideOverlay(); setActive("painel"); }});
     document.body.appendChild(ov);
     return ov;
   }
 
-  function showOverlay(){ ensureOverlay().style.display="block"; loadMenuIntoBody(); }
+  function button(label, handler){
+    var b=document.createElement("button");
+    b.textContent=label;
+    Object.assign(b.style,{border:"0",background:"#eee",borderRadius:"8px",padding:"6px 10px",cursor:"pointer"});
+    b.addEventListener("click", handler);
+    b.addEventListener("mouseenter", function(){ b.style.background="#e0e0e0"; });
+    b.addEventListener("mouseleave", function(){ b.style.background="#eee"; });
+    return b;
+  }
+
+  function showOverlay(){ ensureOverlay().style.display="block"; loadMenuIntoEditor(); }
   function hideOverlay(){ var ov=document.getElementById("cardapio-overlay"); if(ov) ov.style.display="none"; }
 
   function setActive(which){
@@ -45,54 +60,99 @@
     aCardapio.classList.toggle("active", which==="cardapio");
   }
 
-  function el(tag, cls, txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
-
-  function renderMenu(data){
-    bodyEl.innerHTML = ""; // limpa placeholder
-    if(!data || !Array.isArray(data.categories) || data.categories.length===0){
-      bodyEl.appendChild(el("p", null, "Nenhuma categoria cadastrada ainda."));
-      return;
-    }
-    data.categories.sort(function(a,b){ return (a.order||0)-(b.order||0); });
-    data.categories.forEach(function(cat){
-      var cWrap = el("div", null, null);
-      cWrap.style.marginBottom = "18px";
-      var h = el("h3", null, cat.name || ("Categoria "+cat.id));
-      h.style.margin = "0 0 8px 0";
-      cWrap.appendChild(h);
-
-      var ul = el("ul", null, null);
-      ul.style.margin = "0 0 0 18px";
-      (cat.items||[]).forEach(function(it){
-        var li = el("li", null, null);
-        var line = (it.name||"Item")+" — R$ "+Number(it.price||0).toFixed(2);
-        if (it.desc) line += " • "+it.desc;
-        li.textContent = line;
-        ul.appendChild(li);
-      });
-      if (!ul.children.length){
-        var li = el("li", null, "Sem itens");
-        ul.appendChild(li);
-      }
-      cWrap.appendChild(ul);
-      bodyEl.appendChild(cWrap);
-    });
+  function editorEl(){
+    var ed = document.getElementById("menu-editor");
+    if (ed) return ed;
+    ed = document.createElement("textarea");
+    ed.id = "menu-editor";
+    ed.style.width="100%"; ed.style.height="100%"; ed.style.border="0"; ed.style.outline="none";
+    ed.style.fontFamily="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    ed.style.fontSize="13px"; ed.style.lineHeight="1.4"; ed.style.padding="16px";
+    bodyEl.innerHTML=""; bodyEl.appendChild(ed);
+    return ed;
   }
 
-  async function loadMenuIntoBody(){
+  function pretty(obj){ try{ return JSON.stringify(obj, null, 2); }catch(e){ return ""; } }
+
+  async function loadMenuIntoEditor(){
     try{
-      bodyEl.textContent = "Carregando cardápio…";
-      var slug = (new URLSearchParams(location.search).get("slug")) || "bar-do-netto";
+      slug = (new URLSearchParams(location.search).get("slug")) || "bar-do-netto";
+      var ed = editorEl();
+      ed.value = "Carregando cardápio…";
       var res = await fetch("/api/menu?slug="+encodeURIComponent(slug), {credentials:"include"});
       if(!res.ok) throw new Error("HTTP "+res.status);
-      var json = await res.json();
-      renderMenu(json);
+      currentMenu = await res.json();
+      ed.value = pretty(currentMenu);
     }catch(e){
-      bodyEl.textContent = "Falha ao carregar cardápio.";
+      editorEl().value = "Falha ao carregar cardápio: "+e;
       console.error(e);
     }
   }
 
+  function safeParse(){
+    var ed = editorEl();
+    try{
+      var obj = JSON.parse(ed.value);
+      if (!obj || typeof obj!=="object") throw new Error("JSON inválido");
+      return obj;
+    }catch(e){
+      alert("JSON inválido. Erro: "+e.message);
+      throw e;
+    }
+  }
+
+  function onAddCategory(){
+    try{
+      var obj = safeParse();
+      obj.categories = Array.isArray(obj.categories) ? obj.categories : [];
+      var maxId = obj.categories.reduce((m,c)=>Math.max(m, parseInt(c.id||0)||0), 0);
+      var nextId = maxId+1;
+      obj.categories.push({ id: nextId, name: "Nova Categoria", order: nextId, active: true, items: [] });
+      editorEl().value = pretty(obj);
+    }catch(_){}
+  }
+
+  function onAddItem(){
+    try{
+      var obj = safeParse();
+      obj.categories = Array.isArray(obj.categories) ? obj.categories : [];
+      if (!obj.categories.length){ alert("Crie uma categoria primeiro."); return; }
+      var cat = obj.categories[0]; // simples: primeira categoria
+      cat.items = Array.isArray(cat.items) ? cat.items : [];
+      var maxItem = 0;
+      obj.categories.forEach(function(c){
+        (c.items||[]).forEach(function(it){ maxItem = Math.max(maxItem, parseInt(it.id||0)||0); });
+      });
+      var nextItem = maxItem+1;
+      cat.items.push({ id: nextItem, name: "Novo Item", desc: "", price: 0.0, photo_url: null, available: true });
+      editorEl().value = pretty(obj);
+    }catch(_){}
+  }
+
+  async function onSave(){
+    try{
+      var obj = safeParse();
+      // validação mínima
+      if (!Array.isArray(obj.categories)) { alert("'categories' precisa ser uma lista."); return; }
+      var res = await fetch("/api/menu/save?slug="+encodeURIComponent(slug), {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        credentials:"include",
+        body: JSON.stringify(obj)
+      });
+      var j = await res.json().catch(()=>({}));
+      if (res.ok && j.ok){
+        currentMenu = obj;
+        alert("Cardápio salvo com sucesso!");
+      }else{
+        alert("Falha ao salvar: "+(j.error||("HTTP "+res.status)));
+      }
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  // --- Abas na appbar ---
   function buildTabs(){
     var wrap = document.createElement("span"); wrap.className="admin-tabs";
     aPainel = document.createElement("a"); aPainel.className="admin-tab active"; aPainel.href="#"; aPainel.textContent="Painel";
