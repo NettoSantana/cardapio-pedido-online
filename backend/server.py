@@ -1,11 +1,12 @@
 ﻿import os
 import json
 import itertools
-from flask import Flask, send_from_directory, jsonify, request, abort, Response
+import time
 import base64
 from datetime import datetime
+from flask import Flask, send_from_directory, jsonify, request, abort, Response
 
-# Caminhos base
+# ===== Caminhos base =====
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
@@ -13,6 +14,7 @@ DEFAULT_SLUG = "bar-do-netto"
 DATA_DIR = os.path.join(BASE_DIR, "db")
 DB_DIR = os.path.join(DATA_DIR, "json")
 ORDERS_FILE = os.path.join(DB_DIR, "orders.json")
+
 app = Flask(
     __name__,
     static_folder=os.path.join(FRONTEND_DIR),
@@ -119,8 +121,12 @@ FALLBACK_MENU = {
     ]
 }
 
+# ===== Persistência do cardápio (JSON) =====
+def _menu_path(slug: str):
+    return os.path.join(DATA_DIR, slug, "menu.json")
+
 def load_menu(slug: str):
-    path = os.path.join(DATA_DIR, slug, "menu.json")
+    path = _menu_path(slug)
     try:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -130,8 +136,34 @@ def load_menu(slug: str):
         fb["tenant"]["slug"] = slug or DEFAULT_SLUG
         return fb
 
+def save_menu(slug: str, menu: dict):
+    path = _menu_path(slug)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(menu, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
 def item_index(menu):
     return {it["id"]: it for cat in (menu.get("categories") or []) for it in (cat.get("items") or [])}
+
+def _next_ids(menu):
+    cat_ids  = [int(c.get("id", 0)) for c in (menu.get("categories") or [])]
+    item_ids = [int(it.get("id", 0)) for c in (menu.get("categories") or []) for it in (c.get("items") or [])]
+    return (max(cat_ids or [0]) + 1, max(item_ids or [0]) + 1)
+
+def _find_cat(menu, cat_id: int):
+    for c in (menu.get("categories") or []):
+        if int(c.get("id")) == int(cat_id):
+            return c
+    return None
+
+def _find_item(menu, item_id: int):
+    for c in (menu.get("categories") or []):
+        for it in (c.get("items") or []):
+            if int(it.get("id")) == int(item_id):
+                return c, it
+    return None, None
 
 def get_slug_from_request():
     slug = (request.args.get("slug") or "").strip()
@@ -161,14 +193,194 @@ def client_slug(slug: str):
 def admin():
     return send_from_directory(FRONTEND_DIR, "admin.html")
 
-# ===== API =====
+# ===========================
+# API: Cardápio (PUBLIC GET + ADMIN CRUD)
+# ===========================
 @app.get("/api/menu")
 def api_menu():
     slug = get_slug_from_request()
     menu = load_menu(slug)
     return jsonify(menu)
 
-# Histórico público da mesa (dia atual)
+# --- criar categoria ---
+@app.post("/api/menu/categories")
+@require_admin
+def create_category():
+    slug = get_slug_from_request()
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    name = (p.get("name") or "").strip()
+    order = int(p.get("order") or 0)
+    active = bool(p.get("active", True))
+    if not name:
+        abort(400, "campo 'name' é obrigatório")
+
+    menu = load_menu(slug)
+    next_cat_id, _ = _next_ids(menu)
+    cat = {"id": next_cat_id, "name": name, "order": order, "active": active, "items": []}
+    menu.setdefault("categories", []).append(cat)
+    save_menu(slug, menu)
+    return jsonify(cat), 201
+
+# --- atualizar categoria ---
+@app.patch("/api/menu/categories/<int:cat_id>")
+@require_admin
+def patch_category(cat_id: int):
+    slug = get_slug_from_request()
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    menu = load_menu(slug)
+    cat = _find_cat(menu, cat_id)
+    if not cat:
+        abort(404, "categoria não encontrada")
+    if "name" in p:   cat["name"]   = (p.get("name") or "").strip()
+    if "order" in p:  cat["order"]  = int(p.get("order") or 0)
+    if "active" in p: cat["active"] = bool(p.get("active"))
+    save_menu(slug, menu)
+    return jsonify(cat)
+
+# --- excluir categoria (e seus itens) ---
+@app.delete("/api/menu/categories/<int:cat_id>")
+@require_admin
+def delete_category(cat_id: int):
+    slug = get_slug_from_request()
+    menu = load_menu(slug)
+    cats = menu.get("categories") or []
+    newcats = [c for c in cats if int(c.get("id")) != int(cat_id)]
+    if len(newcats) == len(cats):
+        abort(404, "categoria não encontrada")
+    menu["categories"] = newcats
+    save_menu(slug, menu)
+    return jsonify({"ok": True, "deleted_category_id": cat_id})
+
+# --- criar item (em uma categoria) ---
+@app.post("/api/menu/items")
+@require_admin
+def create_item():
+    slug = get_slug_from_request()
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    cat_id = int(p.get("category_id") or 0)
+    name = (p.get("name") or "").strip()
+    if not cat_id or not name:
+        abort(400, "category_id e name são obrigatórios")
+
+    desc = (p.get("desc") or "").strip()
+    price = float(p.get("price") or 0.0)
+    photo_url = (p.get("photo_url") or None)
+    available = bool(p.get("available", True))
+
+    menu = load_menu(slug)
+    cat = _find_cat(menu, cat_id)
+    if not cat:
+        abort(404, "categoria não encontrada")
+
+    _, next_item_id = _next_ids(menu)
+    item = {
+        "id": next_item_id,
+        "name": name,
+        "desc": desc,
+        "price": price,
+        "photo_url": photo_url,
+        "available": available
+    }
+    cat.setdefault("items", []).append(item)
+    save_menu(slug, menu)
+    return jsonify(item), 201
+
+# --- atualizar item ---
+@app.patch("/api/menu/items/<int:item_id>")
+@require_admin
+def patch_item(item_id: int):
+    slug = get_slug_from_request()
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    menu = load_menu(slug)
+    cat, item = _find_item(menu, item_id)
+    if not item:
+        abort(404, "item não encontrado")
+
+    # mover de categoria?
+    if "category_id" in p:
+        new_cat_id = int(p.get("category_id") or 0)
+        if not new_cat_id:
+            abort(400, "category_id inválido")
+        new_cat = _find_cat(menu, new_cat_id)
+        if not new_cat:
+            abort(404, "nova categoria não encontrada")
+        # remove do cat atual e adiciona no novo
+        cat["items"] = [it for it in (cat.get("items") or []) if int(it.get("id")) != int(item_id)]
+        new_cat.setdefault("items", []).append(item)
+        cat = new_cat  # passa a referência
+
+    if "name" in p:       item["name"] = (p.get("name") or "").strip()
+    if "desc" in p:       item["desc"] = (p.get("desc") or "").strip()
+    if "price" in p:      item["price"] = float(p.get("price") or 0.0)
+    if "photo_url" in p:  item["photo_url"] = (p.get("photo_url") or None)
+    if "available" in p:  item["available"] = bool(p.get("available"))
+
+    save_menu(slug, menu)
+    return jsonify(item)
+
+# --- excluir item ---
+@app.delete("/api/menu/items/<int:item_id>")
+@require_admin
+def delete_item(item_id: int):
+    slug = get_slug_from_request()
+    menu = load_menu(slug)
+    for c in (menu.get("categories") or []):
+        before = len(c.get("items") or [])
+        c["items"] = [it for it in (c.get("items") or []) if int(it.get("id")) != int(item_id)]
+        if len(c["items"]) != before:
+            save_menu(slug, menu)
+            return jsonify({"ok": True, "deleted_item_id": item_id})
+    abort(404, "item não encontrado")
+
+# --- reordenar (categorias ou itens de uma categoria) ---
+@app.post("/api/menu/reorder")
+@require_admin
+def reorder_menu():
+    """
+    Body (um dos formatos):
+    {"categories_order":[3,1,2]}
+    {"category_id": 1, "items_order":[201,101,105]}
+    """
+    slug = get_slug_from_request()
+    if not request.is_json:
+        abort(400, "JSON esperado")
+    p = request.get_json(silent=True) or {}
+    menu = load_menu(slug)
+
+    if "categories_order" in p:
+        order = [int(x) for x in (p.get("categories_order") or [])]
+        cats = {int(c.get("id")): c for c in (menu.get("categories") or [])}
+        menu["categories"] = [cats[i] for i in order if i in cats] + [c for i,c in cats.items() if i not in order]
+        # atualiza order numérico também
+        for i, c in enumerate(menu["categories"], start=1):
+            c["order"] = i
+        save_menu(slug, menu)
+        return jsonify({"ok": True, "scope": "categories"})
+
+    cat_id = int(p.get("category_id") or 0)
+    if cat_id and "items_order" in p:
+        cat = _find_cat(menu, cat_id)
+        if not cat:
+            abort(404, "categoria não encontrada")
+        order = [int(x) for x in (p.get("items_order") or [])]
+        items = {int(it.get("id")): it for it in (cat.get("items") or [])}
+        cat["items"] = [items[i] for i in order if i in items] + [it for i,it in items.items() if i not in order]
+        save_menu(slug, menu)
+        return jsonify({"ok": True, "scope": "items", "category_id": cat_id})
+
+    abort(400, "payload inválido para reordenação")
+
+# ===========================
+# API: Meus Pedidos (público) / Admin Pedidos
+# ===========================
 @app.get("/api/my-orders")
 def my_orders_by_table():
     slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
@@ -177,14 +389,12 @@ def my_orders_by_table():
         abort(400, "parâmetro 'table' é obrigatório")
 
     orders = load_orders()
-    # filtra: tenant, mesa, HOJE e apenas ENTREGUES
     data = [o for o in orders
             if o.get("tenant_slug") == slug
             and (o.get("table_code") or "").strip().lower() == table.lower()
             and _is_today_iso(o.get("created_at"))
             and (o.get("status") or "").lower() == "done"]
 
-    # ordena do mais recente para o mais antigo
     def _key(o):
         try:
             return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
@@ -206,7 +416,6 @@ def my_orders_by_table():
 
     return jsonify({"partial_total": parcial, "orders": slim})
 
-# Admin-only: listar pedidos
 @app.get("/api/orders")
 @require_admin
 def list_orders():
@@ -216,7 +425,6 @@ def list_orders():
         orders = [o for o in orders if o.get("tenant_slug") == slug]
     return jsonify([_normalize_order_items(o) for o in orders])
 
-# Público: criar pedido
 @app.post("/api/orders")
 def create_order():
     slug = get_slug_from_request()
@@ -269,29 +477,12 @@ def create_order():
         "service_fee": 0.0,
         "total": total,
         "created_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        "closed": False,  # <— importante para “Fechar conta”
+        "closed": False,
     }
     orders.append(order)
     save_orders(orders)
     return jsonify({"order_id": order_id, "status": order["status"], "total": order["total"]}), 201
 
-@app.get("/api/tabs/summary")
-@require_admin
-def tabs_summary():
-    slug = (request.args.get("slug") or "").strip() or DEFAULT_SLUG
-    orders = [o for o in load_orders() if o.get("tenant_slug") == slug and _is_today_iso(o.get("created_at"))]
-
-    tables = {}
-    for o in orders:
-        mesa = (o.get("table_code") or "-").strip()
-        t = tables.setdefault(mesa, {"table": mesa, "total": 0.0, "count": 0, "closed": True})
-        t["total"] += float(o.get("total") or 0)
-        t["count"] += 1
-        if not o.get("closed", False):
-            t["closed"] = False
-
-    result = sorted(tables.values(), key=lambda x: x["table"])
-    return jsonify(result)
 @app.get("/api/orders/export.csv")
 @require_admin
 def export_orders_csv():
@@ -302,13 +493,10 @@ def export_orders_csv():
     scope = (request.args.get("scope") or "today").strip().lower()  # today|all
 
     orders = load_orders()
-    # filtra por tenant
     orders = [o for o in orders if o.get("tenant_slug") == slug]
-    # escopo: só hoje por padrão
     if scope != "all":
         orders = [o for o in orders if _is_today_iso(o.get("created_at"))]
 
-    # ordena por data
     def _key(o):
         try:
             return datetime.fromisoformat((o.get("created_at") or "").replace("Z",""))
@@ -316,7 +504,6 @@ def export_orders_csv():
             return datetime.min
     orders.sort(key=_key)
 
-    # monta CSV
     buf = StringIO()
     writer = csv.writer(buf)
     writer.writerow([
@@ -347,6 +534,7 @@ def export_orders_csv():
         mimetype="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
 VALID_STATUSES = ["received", "preparing", "delivering", "done", "cancelled"]
 
 @app.patch("/api/orders/<int:order_id>")
@@ -367,9 +555,6 @@ def update_order(order_id: int):
             save_orders(orders)
             return jsonify(o)
     abort(404, "pedido não encontrado")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
 
 @app.post("/api/tabs/close")
 @require_admin
@@ -399,7 +584,6 @@ def tabs_close():
         "total": total
     })
 
-
 def get_service_fee_pct():
     try:
         return float(os.environ.get("SERVICE_FEE_PCT", "0") or 0.0)
@@ -414,7 +598,6 @@ def get_config():
     })
 
 # ===== Assist/Close Requests (MVP in-memory) =====
-import time
 ASSIST_CALLS = []            # {id, table_code, token, requested_at, status}
 CLOSE_REQUESTS = []          # {id, table_code, token, requested_at, status}
 ASSIST_ID_SEQ = itertools.count(1)
@@ -431,7 +614,6 @@ def get_assist_cooldown():
         return 60
 
 def resolve_table_from_payload(payload):
-    # Usa table_code se vier explícito; senão tenta do token (MVP: token = mesa mesmo).
     table_code = (payload.get("table_code") or "").strip() if isinstance(payload, dict) else ""
     token = (payload.get("token") or "").strip() if isinstance(payload, dict) else ""
     if not table_code and token:
@@ -458,7 +640,6 @@ def api_assist():
     LAST_ASSIST_BY_TABLE[table_code] = now
     return jsonify({"ok": True, "assist_id": call_id, "cooldown": cooldown})
 
-# 3) POST /api/tabs/close-request (cliente pede para fechar a conta)
 @app.post("/api/tabs/close-request")
 def api_close_request():
     if not request.is_json:
@@ -475,12 +656,10 @@ def api_close_request():
 @app.get("/api/alerts")
 @require_admin
 def api_alerts():
-    since = (request.args.get("since") or "").strip()
     def filter_open(arr):
         return [x for x in arr if x.get("status")=="open"]
     return jsonify({"assist_calls": filter_open(ASSIST_CALLS), "close_requests": filter_open(CLOSE_REQUESTS), "now": now_iso()})
 
-# 5) POST /api/alerts/ack (admin) -> confirmar atendimento
 @app.post("/api/alerts/ack")
 @require_admin
 def api_alerts_ack():
@@ -497,56 +676,31 @@ def api_alerts_ack():
             return jsonify({"ok": True})
     return jsonify({"ok": False, "reason": "not_found_or_closed"}), 404
 
-
 # ===== Debug admin env (temporário) =====
 @app.get("/health/admin-env")
 def admin_env_health():
     user = (os.environ.get("ADMIN_USER") or "").strip()
     has_pass = bool((os.environ.get("ADMIN_PASS") or "").strip())
-    # mascara o usuário deixando só primeiros 2 chars
     masked_user = (user[:2] + "***") if user else ""
     return jsonify(ok=True, admin_user=masked_user, has_admin_pass=has_pass)
 
-
-
-
-
-
-
-
-# ===== ROTA TEMPORÁRIA DE DEBUG (REMOVE DEPOIS) =====
+# ===== ROTA TEMPORÁRIA DE DEBUG =====
 @app.get("/admin-debug")
 def admin_debug():
-    """
-    Acessa o admin sem BasicAuth quando ADMIN_AUTH_BYPASS=1
-    ou se ?dev=<ADMIN_USER> for passado — apenas DEBUG.
-    """
-    # segurança extra: permite só quando a variável de bypass estiver ativa
     if (os.environ.get("ADMIN_AUTH_BYPASS") or "").strip() != "1":
-        # permitir também via ?dev=USER para caso queira
         if request.args.get("dev", "").strip() != (os.environ.get("ADMIN_USER") or "").strip():
             abort(401)
-
-    # slug obrigatório (como o admin normal)
     slug = (request.args.get("slug") or "").strip()
     if not slug:
         abort(400, "slug é obrigatório")
-
-    # entrega o arquivo admin.html do frontend (mesma página do admin)
     return send_from_directory(FRONTEND_DIR, "admin.html")
-
-
-
 
 @app.get("/admin-alerts")
 @require_admin
 def admin_alerts_minimal():
     return send_from_directory(FRONTEND_DIR, "admin_alerts.html")
 
-
-
-
-# --- normalize: garante delivered_qty nos itens ---
+# --- helpers admin (itens/entrega) ---
 def _normalize_order_items(order):
     try:
         for it in order.get("items", []):
@@ -556,10 +710,7 @@ def _normalize_order_items(order):
         pass
     return order
 
-
-
 def _recompute_status(order):
-    # se cancelado, mantém
     if (order.get("status") or "").lower() == "cancelled":
         return order["status"]
     items = order.get("items", [])
@@ -569,7 +720,6 @@ def _recompute_status(order):
     total_units = sum(int(i.get("qty",0)) for i in items)
     delivered   = sum(int(i.get("delivered_qty",0)) for i in items)
     if delivered <= 0:
-        # se estava "received", mantém; se estava "delivering" e tiraram, volta para received
         order["status"] = "received"
     elif delivered < total_units:
         order["status"] = "delivering"
@@ -583,7 +733,6 @@ def deliver_item(order_id:int, item_id:int):
     if not request.is_json:
         abort(400, "JSON esperado")
     p = request.get_json(silent=True) or {}
-    # qty a entregar: se não vier, entrega o restante
     qty_req = int(p.get("qty", 0) or 0)
 
     slug = (request.args.get("slug") or "").strip() or None
@@ -606,13 +755,14 @@ def deliver_item(order_id:int, item_id:int):
     remaining = max(0, qty_total - qty_deliv)
 
     if remaining <= 0:
-        return jsonify({"ok": True, "order": order})  # já entregue
+        return jsonify({"ok": True, "order": order})
 
     deliver_now = remaining if qty_req <= 0 or qty_req > remaining else qty_req
     item["delivered_qty"] = qty_deliv + deliver_now
-
-    # recomputa status do pedido
     _recompute_status(order)
-
     save_orders(orders)
     return jsonify({"ok": True, "order": order, "delivered_item": {"id": item_id, "delivered_now": deliver_now, "remaining": qty_total - item["delivered_qty"]}})
+
+# ===== MAIN =====
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
