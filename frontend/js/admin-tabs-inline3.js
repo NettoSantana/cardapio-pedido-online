@@ -337,3 +337,113 @@ if (typeof window.onRemoveItem !== "function") {
     }catch(e){ console.error(e); }
   };
 }
+(function(){
+  if (window.__ensureBtns) return; window.__ensureBtns = 1;
+
+  function head(){ return document.getElementById("cardapio-head"); }
+  function ed(){ return document.getElementById("cardapio-editor"); }
+
+  function upsertBtn(id, label, handler, beforeId){
+    var h = head(); if(!h) return;
+    var btn = h.querySelector("#"+id);
+    if (!btn){
+      btn = document.createElement("button");
+      btn.id = id; btn.textContent = label;
+      Object.assign(btn.style,{marginRight:"8px"});
+      if (beforeId){
+        var ref = h.querySelector("#"+beforeId);
+        ref ? h.insertBefore(btn, ref) : h.appendChild(btn);
+      } else {
+        h.appendChild(btn);
+      }
+    }
+    if (handler && !btn.__bound){ btn.addEventListener("click", handler); btn.__bound = 1; }
+  }
+
+  // utilitários leves
+  function safeParse(){
+    try{ return JSON.parse(ed().value || "{}"); }catch(e){ alert("JSON inválido no editor."); throw e; }
+  }
+  function pretty(o){ return JSON.stringify(o,null,2); }
+  function nextIds(menu){
+    var cids = (menu.categories||[]).map(c=>+c.id||0);
+    var iids = (menu.categories||[]).flatMap(c=>(c.items||[])).map(it=>+it.id||0);
+    return {cat: (Math.max(0,...cids)+1)||1, item: (Math.max(0,...iids)+1)||1};
+  }
+
+  // handlers ADD/EDIT simples (somente se não existirem)
+  if (typeof window.onAddCategory!=="function"){
+    window.onAddCategory = function(){
+      var m = safeParse(); m.categories = m.categories||[];
+      var ids = nextIds(m);
+      var name = prompt("Nome da categoria nova:","Nova Categoria"); if(!name) return;
+      m.categories.push({id:ids.cat, name:name, order:ids.cat, active:true, items:[]});
+      ed().value = pretty(m);
+    };
+  }
+
+  if (typeof window.onAddItem!=="function"){
+    window.onAddItem = function(){
+      var m=safeParse(), cats=m.categories||[]; if(!cats.length){alert("Crie uma categoria primeiro.");return;}
+      var catPick = prompt("ID da categoria para adicionar item:\n"+cats.map(c=>c.id+" - "+c.name).join("\n"), cats[0].id);
+      if(!catPick) return;
+      var c = cats.find(x=>String(x.id)===String(catPick)); if(!c){alert("Categoria não encontrada.");return;}
+      var ids = nextIds(m);
+      var nm = prompt("Nome do item:","Novo Item"); if(!nm) return;
+      var pr = parseFloat(prompt("Preço (ex: 12.50):","0")); if(isNaN(pr)) pr=0;
+      var ds = prompt("Descrição:",""); 
+      c.items = c.items||[];
+      c.items.push({id:ids.item, name:nm, desc:ds, price:pr, available:true});
+      ed().value = pretty(m);
+    };
+  }
+
+  if (typeof window.onEditItem!=="function"){
+    window.onEditItem = function(){
+      var m=safeParse(), cats=m.categories||[]; if(!cats.length){alert("Sem categorias.");return;}
+      var catPick = prompt("Editar item de QUAL categoria (ID)?\n"+cats.map(c=>c.id+" - "+c.name).join("\n"), cats[0].id);
+      if(!catPick) return;
+      var c = cats.find(x=>String(x.id)===String(catPick)); if(!c){alert("Categoria não encontrada.");return;}
+      c.items=c.items||[]; if(!c.items.length){alert("Essa categoria não tem itens.");return;}
+      var itemPick = prompt("Qual item (ID)?\n"+c.items.map(it=>it.id+" - "+it.name).join("\n"), c.items[0].id);
+      if(!itemPick) return;
+      var it = c.items.find(x=>String(x.id)===String(itemPick)); if(!it){alert("Item não encontrado.");return;}
+      var nm = prompt("Nome:", it.name); if(nm===null) return; it.name = nm||it.name;
+      var ds = prompt("Descrição:", it.desc||""); if(ds===null) return; it.desc = ds;
+      var pr = prompt("Preço:", String(it.price||0)); if(pr===null) return;
+      pr = parseFloat(pr); if(!isNaN(pr)) it.price = pr;
+      var av = confirm("Disponível? OK=Sim / Cancel=Não"); it.available = av;
+      ed().value = pretty(m);
+    };
+  }
+
+  if (typeof window.onSaveMenu!=="function"){
+    window.onSaveMenu = async function(){
+      try{
+        var m = safeParse();
+        var slug = (m.tenant && m.tenant.slug) || "bar-do-netto";
+        var r = await fetch("/api/menu/save?slug="+encodeURIComponent(slug),{
+          method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(m)
+        });
+        if(!r.ok){ var t=await r.text(); alert("Falha ao salvar: "+t); return; }
+        alert("Salvo!");
+      }catch(e){ console.error(e); alert("Erro ao salvar."); }
+    };
+  }
+
+  function ensureButtons(){
+    if (!head() || !ed()) return;
+    // ordem: Add Cat | Add Item | Edit Item | (Remove Item | Remove Cat) | Salvar | Fechar
+    upsertBtn("btn-add-cat",   "Adicionar categoria", window.onAddCategory,  "btn-save");
+    upsertBtn("btn-add-item",  "Adicionar item",      window.onAddItem,      "btn-save");
+    upsertBtn("btn-edit-item", "Editar item",         window.onEditItem,     "btn-save");
+    upsertBtn("btn-remove-item","Remover item",       window.onRemoveItem,   "btn-save");
+    upsertBtn("btn-remove-cat","Remover categoria",   window.onRemoveCategory,"btn-save");
+    // garante o botão salvar se não existir
+    upsertBtn("btn-save","Salvar", window.onSaveMenu);
+  }
+
+  // roda repetidamente porque o overlay pode ser recriado
+  setInterval(ensureButtons, 600);
+  document.addEventListener("DOMContentLoaded", ensureButtons);
+})();
