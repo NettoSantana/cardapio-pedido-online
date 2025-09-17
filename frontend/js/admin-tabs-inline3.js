@@ -283,3 +283,57 @@ if (typeof window.onRemoveItem !== "function") {
     }catch(e){ console.error(e); }
   };
 }
+if (typeof window.editorEl !== "function") { window.editorEl = function(){ return document.getElementById("cardapio-editor"); }; }
+if (typeof window.pretty   !== "function") { window.pretty   = function(o){ return JSON.stringify(o,null,2); }; }
+
+if (typeof window.onRemoveCategory !== "function") {
+  window.onRemoveCategory = function(){
+    try{
+      var obj = (typeof safeParse==="function") ? safeParse() : JSON.parse(editorEl().value||"{}");
+      obj.categories = Array.isArray(obj.categories) ? obj.categories : [];
+      if (!obj.categories.length){ alert("Não há categorias para remover."); return; }
+
+      var list = obj.categories.map(function(c){return c.id+" - "+c.name}).join("\n");
+      var pick = prompt("Remover QUAL categoria?\n"+list);
+      if (!pick) return;
+
+      var idx = obj.categories.findIndex(function(c){return String(c.id)===String(pick)});
+      if (idx<0){ alert("Categoria não encontrada."); return; }
+
+      if (!confirm('Tem certeza que deseja remover a categoria "'+obj.categories[idx].name+'" e TODOS os itens dela?')) return;
+      obj.categories.splice(idx,1);
+      editorEl().value = (typeof pretty==="function") ? pretty(obj) : JSON.stringify(obj,null,2);
+    }catch(e){ console.error(e); }
+  };
+}
+
+if (typeof window.onRemoveItem !== "function") {
+  window.onRemoveItem = function(){
+    try{
+      var obj = (typeof safeParse==="function") ? safeParse() : JSON.parse(editorEl().value||"{}");
+      obj.categories = Array.isArray(obj.categories) ? obj.categories : [];
+      if (!obj.categories.length){ alert("Crie uma categoria primeiro."); return; }
+
+      var list = obj.categories.map(function(c){return c.id+" - "+c.name}).join("\n");
+      var pick = prompt("De QUAL categoria remover item?\n"+list, obj.categories[0].id);
+      if (!pick) return;
+
+      var cat = obj.categories.find(function(c){return String(c.id)===String(pick)});
+      if (!cat){ alert("Categoria não encontrada."); return; }
+
+      cat.items = Array.isArray(cat.items) ? cat.items : [];
+      if (!cat.items.length){ alert("Essa categoria não tem itens."); return; }
+
+      var listItems = cat.items.map(function(it){return it.id+" - "+it.name}).join("\n");
+      var pickItem = prompt('REMOVER qual item de "'+cat.name+'"?\n'+listItems, cat.items[0].id);
+      if (!pickItem) return;
+
+      var idx = cat.items.findIndex(function(it){return String(it.id)===String(pickItem)});
+      if (idx<0){ alert("Item não encontrado."); return; }
+
+      if (!confirm('Tem certeza que deseja remover o item "'+cat.items[idx].name+'"?')) return;
+      cat.items.splice(idx,1);
+      editorEl().value = (typeof pretty==="function") ? pretty(obj) : JSON.stringify(obj,null,2);
+    }catch(e){ console.error(e); }
+  };
+}
