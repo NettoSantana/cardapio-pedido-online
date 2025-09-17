@@ -447,3 +447,58 @@ if (typeof window.onRemoveItem !== "function") {
   setInterval(ensureButtons, 600);
   document.addEventListener("DOMContentLoaded", ensureButtons);
 })();
+(function(){
+  // Handlers de REMOVER (só cria se não existir)
+  function _ed(){ return document.getElementById("cardapio-editor"); }
+  function _safe(){ try{ return JSON.parse(_ed().value||"{}"); }catch(e){ alert("JSON inválido."); throw e; } }
+  function _pretty(o){ return JSON.stringify(o,null,2); }
+
+  if (typeof window.onRemoveItem!=="function"){
+    window.onRemoveItem = function(){
+      var m=_safe(), cats=m.categories||[]; if(!cats.length){alert("Sem categorias.");return;}
+      var catPick = prompt("Remover ITEM de qual categoria (ID)?\n"+cats.map(c=>c.id+" - "+c.name).join("\n"), cats[0].id);
+      if(!catPick) return;
+      var c = cats.find(x=>String(x.id)===String(catPick)); if(!c){alert("Categoria não encontrada.");return;}
+      c.items=c.items||[]; if(!c.items.length){alert("Essa categoria não tem itens.");return;}
+      var itemPick = prompt("Qual item (ID) remover?\n"+c.items.map(it=>it.id+" - "+it.name).join("\n"), c.items[0].id);
+      if(!itemPick) return;
+      var before = c.items.length;
+      c.items = c.items.filter(it=>String(it.id)!==String(itemPick));
+      if (c.items.length===before){ alert("Item não encontrado."); return; }
+      _ed().value = _pretty(m);
+    };
+  }
+
+  if (typeof window.onRemoveCategory!=="function"){
+    window.onRemoveCategory = function(){
+      var m=_safe(), cats=m.categories||[]; if(!cats.length){alert("Sem categorias.");return;}
+      var catPick = prompt("Remover QUAL categoria (ID)?\n"+cats.map(c=>c.id+" - "+c.name).join("\n"), cats[0].id);
+      if(!catPick) return;
+      var before = cats.length;
+      m.categories = cats.filter(c=>String(c.id)!==String(catPick));
+      if (m.categories.length===before){ alert("Categoria não encontrada."); return; }
+      _ed().value = _pretty(m);
+    };
+  }
+
+  // Garante que os botões existam (inclusive os de remover)
+  function head(){ return document.getElementById("cardapio-head"); }
+  function upsertBtn(id, label, handler, beforeId){
+    var h=head(); if(!h) return;
+    var b=h.querySelector("#"+id);
+    if(!b){
+      b=document.createElement("button"); b.id=id; b.textContent=label;
+      Object.assign(b.style,{marginRight:"8px"});
+      if(beforeId){ var ref=h.querySelector("#"+beforeId); ref? h.insertBefore(b,ref):h.appendChild(b); }
+      else h.appendChild(b);
+    }
+    if(handler && !b.__bound){ b.addEventListener("click", handler); b.__bound=1; }
+  }
+  function ensureRemoveButtons(){
+    if(!head()) return;
+    upsertBtn("btn-remove-item", "Remover item", window.onRemoveItem, "btn-save");
+    upsertBtn("btn-remove-cat",  "Remover categoria", window.onRemoveCategory, "btn-save");
+  }
+  setInterval(ensureRemoveButtons, 600);
+  document.addEventListener("DOMContentLoaded", ensureRemoveButtons);
+})();
