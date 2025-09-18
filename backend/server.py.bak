@@ -117,15 +117,7 @@ def load_menu(slug: str):
         app.logger.warning(f"[menu] fallback usado para slug={slug}. Erro: {e}")
         fb = json.loads(json.dumps(FALLBACK_MENU))
         fb["tenant"]["slug"] = slug or DEFAULT_SLUG
-        return fb
-def save_menu(slug: str, menu: dict):
-    path = _menu_path(slug)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(menu, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
-def item_index(menu):
+        return fbdef item_index(menu):
     return {it["id"]: it for cat in (menu.get("categories") or []) for it in (cat.get("items") or [])}
 def _next_ids(menu):
     cat_ids  = [int(c.get("id", 0)) for c in (menu.get("categories") or [])]
@@ -677,15 +669,7 @@ def deliver_item(order_id:int, item_id:int):
 # ===== MAIN =====
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
-# ===== Persistência do cardápio (CRUD mínimo) =====
-def save_menu(slug: str, menu: dict):
-    path = os.path.join(DATA_DIR, slug, "menu.json")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(menu, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
-@app.post("/api/menu/save")
+# ===== Persistência do cardápio (CRUD mínimo) =====@app.post("/api/menu/save")
 @require_admin
 def api_menu_save():
     slug = get_slug_from_request()
@@ -697,27 +681,11 @@ def api_menu_save():
         abort(400, "categories deve ser lista")
     save_menu(slug, payload)
     return jsonify({"ok": True})
-@app.route('/admin', methods=['GET'])
-def admin_editor():
-    return render_template('admin.html')
-@app.route('/admin', methods=['GET'])
-def admin_editor():
-    return render_template('admin.html')
-# === Admin Editor (rota dedicada) ===
-try:
-    from flask import render_template
-except Exception:
-    pass
-try:
-    app
-except NameError:
-    # Se a app não chamar 'app', me diga o nome. Como você sobe com waitress 'server:app',
-    # é quase certo que o objeto seja 'app'.
-    raise RuntimeError("Objeto Flask 'app' não encontrado em server.py")
-# Remove rota antiga /admin se existir (faz nada se não tiver)
-# (Ignorado aqui: evitar regex em Python. Se tiver rota /admin duplicada, comente a antiga.)
-@app.route('/admin', methods=['GET'])
-def admin_editor():
-    return render_template('admin.html')
 
+
+
+@app.get('/admin')
+@require_admin
+def admin_editor():
+    return render_template('admin.html')
 
