@@ -1,6 +1,7 @@
-﻿fix(server): limpar linhas PowerShell do server.py e expor /admin
+﻿fix(server): cabeçalho Flask refeito + imports corretos + rota /admin
 
-- Remove linhas com \/\System.Collections.Hashtable do Python
-- Garante import render_template
-- Cria rota /admin -> templates/admin.html (app = Flask(...))
+- Remove lixo PowerShell do cabeçalho
+- Garante imports: Flask, request, jsonify, abort, send_from_directory, Response, render_template
+- Preserva conteúdo existente a partir de 'app = Flask('
+- Cria rota /admin -> admin.html (se faltava)
 - Cache-bust do /static/admin.js

@@ -697,27 +697,10 @@ def api_menu_save():
         abort(400, "categories deve ser lista")
     save_menu(slug, payload)
     return jsonify({"ok": True})
-@app.route('/admin', methods=['GET'])
-def admin_editor():
-    return render_template('admin.html')
-@app.route('/admin', methods=['GET'])
-def admin_editor():
-    return render_template('admin.html')
-# === Admin Editor (rota dedicada) ===
-try:
-    from flask import render_template
-except Exception:
-    pass
-try:
-    app
-except NameError:
-    # Se a app não chamar 'app', me diga o nome. Como você sobe com waitress 'server:app',
-    # é quase certo que o objeto seja 'app'.
-    raise RuntimeError("Objeto Flask 'app' não encontrado em server.py")
-# Remove rota antiga /admin se existir (faz nada se não tiver)
-# (Ignorado aqui: evitar regex em Python. Se tiver rota /admin duplicada, comente a antiga.)
-@app.route('/admin', methods=['GET'])
-def admin_editor():
-    return render_template('admin.html')
 
+
+
+@app.route('/admin', methods=['GET'])
+def admin_editor():
+    return render_template('admin.html')
 
