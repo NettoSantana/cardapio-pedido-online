@@ -1,5 +1,5 @@
-﻿fix(admin): página isolada + dedupe inline p/ remover botões duplicados (Painel/Cardápio)
+﻿fix(admin): rota /admin servindo templates/admin.html + render_template import
 
-- admin.html com topbar único (#adminTopbar) e script de dedupe
-- cache-bust no /static/admin.js
-- prepend de dedupe no admin.js para reforço
+- Detecta var do app (app) e injeta rota /admin
+- Garante import render_template
+- Cache-bust em /static/admin.js
