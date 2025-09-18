@@ -1,402 +1,128 @@
-﻿<!doctype html>
-<html lang="pt-br">
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Admin • Cardápio</title>
+  <meta charset="utf-8" />
+  <title>Admin — Editor de Cardápio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
   <style>
-    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22c55e; --accent-2:#3b82f6; --danger:#ef4444; }
-    * { box-sizing:border-box; }
-    html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:500 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
-    header { padding:16px 20px; border-bottom:1px solid #1f2937; display:flex; gap:10px; align-items:center; }
-    header h1 { margin:0; font-size:18px; font-weight:700; }
-    header .spacer { flex:1 1 auto; }
-    main { max-width:1100px; margin:0 auto; padding:20px; display:grid; grid-template-columns: 1fr 1.2fr; gap:20px; }
-    .card { background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:14px; }
-    .card h2 { margin:0 0 10px; font-size:16px; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .btn { border:1px solid #334155; background:#0b1220; color:var(--text); border-radius:8px; padding:9px 12px; cursor:pointer; }
-    .btn.primary { border-color:#1f2937; background:#0b1329; }
-    .btn.add { border-color:#14532d; background:#0b1f14; }
-    .btn.edit { border-color:#1e3a8a; background:#0b1430; }
-    .btn.del  { border-color:#7f1d1d; background:#2a0b0b; }
-    .btn:hover { filter:brightness(1.1); }
-    .muted { color:var(--muted); font-size:13px; }
-
-    ul.tree { list-style:none; padding:0; margin:0; }
-    ul.tree > li { margin:8px 0; }
-    .cat { padding:8px; border:1px dashed #334155; border-radius:8px; }
-    .item { margin:6px 0 0 14px; padding:6px 8px; border:1px solid #253047; border-radius:8px; background:#0b1220; font-size:14px; display:flex; justify-content:space-between; gap:6px; }
-
-    /* Modal */
-    .modal-wrap { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.4); padding:16px; }
-    .modal { width:min(680px, 100%); background:#0b1220; border:1px solid #1f2937; border-radius:12px; padding:16px; }
-    .modal h3 { margin:0 0 12px; font-size:16px; }
-    .grid { display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
-    .grid .full { grid-column:1 / -1; }
-    label { font-size:13px; color:var(--muted); display:block; margin:4px 0; }
-    input, select, textarea { width:100%; border:1px solid #334155; background:#0b1220; color:var(--text); border-radius:8px; padding:8px 10px; }
-    textarea { min-height:80px; resize:vertical; }
-    .actions { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
-    .pill { display:inline-flex; gap:8px; align-items:center; border:1px solid #334155; padding:6px 8px; border-radius:999px; }
+    :root{--bg:#0f1115;--surface:#151924;--muted:#23293a;--muted-2:#1b2030;--text:#e8eaf1;--text-2:#9aa4bd;--primary:#5b8cff;--danger:#ff5b74;--ok:#3ecf8e;--warn:#f7b955;--border:#2a3146;--shadow:0 8px 24px rgba(0,0,0,.35)}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .topbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;align-items:center;padding:12px 16px;background:linear-gradient(180deg,rgba(21,25,36,.98),rgba(21,25,36,.92));border-bottom:1px solid var(--border)}
+    .topbar .title{font-weight:600;margin-right:12px}
+    .btn{padding:8px 12px;border:1px solid var(--border);background:var(--muted);color:var(--text);border-radius:8px;cursor:pointer}
+    .btn.primary{background:var(--primary);border-color:#3e6ef5;color:#fff}.btn.ok{background:var(--ok);border-color:#26b874;color:#08130f}.btn.warn{background:var(--warn);border-color:#d79a1e;color:#1c1405}.btn.danger{background:var(--danger);border-color:#db3b57}.btn:disabled{opacity:.5;cursor:not-allowed}
+    .spacer{flex:1}.seg{display:flex;gap:8px}.filters{display:flex;gap:8px;align-items:center;margin-left:8px}
+    .select,.input{padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--muted-2);color:var(--text)}
+    .wrap{display:flex;height:calc(100% - 56px)}.list{flex:1;padding:12px 16px;overflow:auto}
+    .table{width:100%;border-collapse:separate;border-spacing:0 8px}.thead{color:var(--text-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+    .row{background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:10px}.row td{padding:10px 12px;vertical-align:middle}.row .type{font-weight:600}
+    .badge{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid var(--border);background:var(--muted-2);color:var(--text-2)}.row.selected{outline:2px solid var(--primary)}.draghandle{cursor:grab;opacity:.7}
+    .status-Disponível{color:#85ffa8}.status-Oculto{color:#ffc46c}.status-Indisponível{color:#ff8080}
+    .drawer{width:0;max-width:560px;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow);transition:width .2s ease;overflow:hidden;display:flex;flex-direction:column}
+    .drawer.open{width:min(100%,520px)}.drawer-header{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)}
+    .tabs{display:flex;gap:6px}.tab{padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:var(--muted-2);cursor:pointer}.tab.active{background:var(--primary);color:#fff;border-color:#3e6ef5}
+    .drawer-body{padding:16px;overflow:auto}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}.label{font-size:12px;color:var(--text-2)}
+    .input,.select,textarea{width:100%}textarea{min-height:80px;resize:vertical}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{background:var(--muted-2);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:999px}
+    .drawer-footer{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}.hint{color:var(--text-2);font-size:12px}
+    .img-preview{width:100%;max-height:180px;object-fit:cover;border:1px solid var(--border);border-radius:8px;display:none}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111;border:1px solid var(--border);padding:10px 12px;border-radius:8px;box-shadow:var(--shadow);display:none;z-index:20}
+    .toast.show{display:block}.reorder-active .draghandle{opacity:1}.drag-ghost{opacity:.4}
   </style>
+
+  <!-- DEDUPE INLINE: remove botões Painel/Cardápio fora do nosso topbar -->
+  <script>
+    (function(){
+      function isInsideAdminTopbar(el){
+        while(el){ if(el.id==='adminTopbar') return true; el = el.parentElement; }
+        return false;
+      }
+      function dedupe(){
+        var labels = ['painel','cardápio','cardapio'];
+        var btns = Array.from(document.querySelectorAll('button'));
+        var byLabel = btns.filter(b => labels.includes((b.textContent||'').trim().toLowerCase()));
+        // mantém só se estiver no #adminTopbar
+        byLabel.forEach(b=>{
+          if(!isInsideAdminTopbar(b)) b.remove();
+        });
+      }
+      document.addEventListener('DOMContentLoaded', dedupe);
+    })();
+  </script>
 </head>
 <body>
-  <header>
-    <h1>Admin • Cardápio</h1>
-    <span class="pill muted">slug: <strong id="slugView"></strong></span>
+  <div class="topbar" id="adminTopbar" data-v="admin-2025-09-17-2015">
+    <div class="title">Editor de Cardápio</div>
+    <div class="seg">
+      <button class="btn" id="btnAdd">Adicionar</button>
+      <button class="btn" id="btnEdit" disabled>Editar</button>
+      <button class="btn danger" id="btnDelete" disabled>Excluir</button>
+      <button class="btn" id="btnDuplicate" disabled>Duplicar</button>
+      <button class="btn warn" id="btnReorder">Reordenar</button>
+      <button class="btn ok" id="btnPublish">Publicar</button>
+    </div>
     <div class="spacer"></div>
-    <button id="btnReload" class="btn">Recarregar</button>
-    <button id="btnAdd" class="btn add">➕ Adicionar</button>
-    <button id="btnEdit" class="btn edit">✏️ Editar</button>
-    <button id="btnDel"  class="btn del">🗑️ Excluir</button>
-  </header>
-
-  <main>
-    <section class="card">
-      <h2>Visão atual do cardápio</h2>
-      <div class="muted">Categorias e itens (somente leitura). Selecione abaixo no modal quando quiser alterar.</div>
-      <div id="menuContainer" style="margin-top:10px"></div>
-    </section>
-
-    <section class="card">
-      <h2>Ações rápidas</h2>
-      <div class="row" style="margin-bottom:10px">
-        <label class="pill"><input type="checkbox" id="chkOnlyActive" checked/> Mostrar apenas categorias ativas</label>
-        <label class="pill"><input type="checkbox" id="chkOnlyAvailable" /> Mostrar apenas itens disponíveis</label>
-      </div>
-      <div class="muted">Use os botões do topo para Adicionar/Editar/Excluir. Aqui você só filtra a visualização.</div>
-    </section>
-  </main>
-
-  <!-- Modal único -->
-  <div id="modalWrap" class="modal-wrap">
-    <div class="modal">
-      <h3 id="modalTitle">Ação</h3>
-      <div class="grid">
-        <div>
-          <label>Ação</label>
-          <select id="selAction">
-            <option value="add">Adicionar</option>
-            <option value="edit">Editar</option>
-            <option value="del">Excluir</option>
-          </select>
-        </div>
-        <div>
-          <label>Tipo</label>
-          <select id="selType">
-            <option value="category">Categoria</option>
-            <option value="item">Item</option>
-          </select>
-        </div>
-
-        <div class="full"><hr style="border:none; border-top:1px solid #1f2937"/></div>
-
-        <!-- Seletores -->
-        <div>
-          <label>Categoria (para Item ou p/ escolher qual categoria editar/excluir)</label>
-          <select id="selCategory"></select>
-        </div>
-        <div>
-          <label>Item (quando Tipo = Item)</label>
-          <select id="selItem"></select>
-        </div>
-
-        <div class="full"><hr style="border:none; border-top:1px solid #1f2937"/></div>
-
-        <!-- Campos de categoria -->
-        <div>
-          <label>Nome da categoria</label>
-          <input id="catName" placeholder="ex.: Porções"/>
-        </div>
-        <div>
-          <label>Ordem</label>
-          <input id="catOrder" type="number" min="0" step="1" value="0"/>
-        </div>
-        <div class="full">
-          <label><input type="checkbox" id="catActive" checked/> Categoria ativa</label>
-        </div>
-
-        <!-- Campos de item -->
-        <div>
-          <label>Nome do item</label>
-          <input id="itemName" placeholder="ex.: Batata Frita"/>
-        </div>
-        <div>
-          <label>Preço</label>
-          <input id="itemPrice" type="number" min="0" step="0.01" value="0.00"/>
-        </div>
-        <div class="full">
-          <label>Descrição</label>
-          <textarea id="itemDesc" placeholder="ex.: 300g crocante"></textarea>
-        </div>
-        <div>
-          <label>Foto (URL)</label>
-          <input id="itemPhoto" placeholder="https://..."/>
-        </div>
-        <div>
-          <label><input type="checkbox" id="itemAvailable" checked/> Item disponível</label>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button id="btnCancel" class="btn">Cancelar</button>
-        <button id="btnConfirm" class="btn primary">Confirmar</button>
-      </div>
+    <div class="filters">
+      <select class="select" id="filterType">
+        <option value="all">Todos</option>
+        <option value="item">Itens</option>
+        <option value="categoria">Categorias</option>
+      </select>
+      <input class="input" id="search" placeholder="Buscar por nome/tag..." />
     </div>
   </div>
 
-<script>
-(() => {
-  // --- estado ---
-  let MENU = null;
-  const qs  = new URLSearchParams(location.search);
-  const slug = (qs.get("slug") || "").trim() || "bar-do-netto";
-  document.getElementById("slugView").textContent = slug;
+  <div class="wrap">
+    <div class="list">
+      <table class="table" id="grid">
+        <thead class="thead">
+          <tr><th style="width:28px;"></th><th>Tipo</th><th>Nome</th><th>Categoria</th><th>Preço</th><th>Status</th><th>Ordem</th></tr>
+        </thead>
+        <tbody id="gridBody"></tbody>
+      </table>
+      <div class="hint">Atalhos: N/E/D/Del/R/P, Esc, Ctrl+S, Ctrl+Enter.</div>
+    </div>
 
-  // --- helpers http ---
-  const j = (res) => {
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  };
-  const headers = { "Content-Type": "application/json" };
+    <aside class="drawer" id="drawer">
+      <div class="drawer-header">
+        <div class="tabs">
+          <button class="tab active" data-tab="item">Item</button>
+          <button class="tab" data-tab="categoria">Categoria</button>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn" id="btnCloseDrawer">Fechar (Esc)</button>
+      </div>
+      <div class="drawer-body">
+        <form id="formItem" data-kind="item">
+          <div class="field"><div class="label">Nome *</div><input class="input" id="it_nome" autocomplete="off" /></div>
+          <div class="field"><div class="label">Categoria *</div><div style="display:flex;gap:8px"><select class="select" id="it_categoria"></select><button class="btn" id="btnNewCatInline" type="button">+ criar</button></div></div>
+          <div class="field"><div class="label">Preço (R$)</div><input class="input" id="it_preco" type="number" step="0.01" min="0" /></div>
+          <div class="field"><div class="label">Status</div><select class="select" id="it_status"><option>Disponível</option><option>Oculto</option><option>Indisponível</option></select></div>
+          <div class="field"><div class="label">Descrição</div><textarea id="it_desc" class="input" placeholder="Detalhes do item..."></textarea></div>
+          <div class="field"><div class="label">Imagem (URL)</div><input class="input" id="it_img" placeholder="https://..." /><img id="it_img_prev" class="img-preview" alt="preview"/></div>
+          <div class="field"><div class="label">Tags (vírgula)</div><input class="input" id="it_tags" placeholder="vegano, sem-glúten" /><div id="it_tags_preview" class="chips"></div></div>
+          <div class="field"><div class="label">Ordem</div><input class="input" id="it_ordem" type="number" step="1" /></div>
+        </form>
 
-  // --- elementos ---
-  const elMenu = document.getElementById("menuContainer");
-  const elOnlyActive = document.getElementById("chkOnlyActive");
-  const elOnlyAvail  = document.getElementById("chkOnlyAvailable");
+        <form id="formCategoria" data-kind="categoria" style="display:none">
+          <div class="field"><div class="label">Nome *</div><input class="input" id="cat_nome" autocomplete="off" /></div>
+          <div class="field"><div class="label">Status</div><select class="select" id="cat_status"><option>Ativa</option><option>Oculta</option></select></div>
+          <div class="field"><div class="label">Ordem</div><input class="input" id="cat_ordem" type="number" step="1" /></div>
+        </form>
+      </div>
+      <div class="drawer-footer">
+        <button class="btn" id="btnSalvar">Salvar (Ctrl+S)</button>
+        <button class="btn primary" id="btnSalvarContinuar">Salvar e continuar (Ctrl+Enter)</button>
+        <div class="spacer"></div>
+        <div class="hint" id="dirtyHint" style="display:none">Alterações não publicadas</div>
+      </div>
+    </aside>
+  </div>
 
-  const modalWrap = document.getElementById("modalWrap");
-  const selAction = document.getElementById("selAction");
-  const selType   = document.getElementById("selType");
-  const selCat    = document.getElementById("selCategory");
-  const selItem   = document.getElementById("selItem");
-
-  const catName   = document.getElementById("catName");
-  const catOrder  = document.getElementById("catOrder");
-  const catActive = document.getElementById("catActive");
-
-  const itemName  = document.getElementById("itemName");
-  const itemPrice = document.getElementById("itemPrice");
-  const itemDesc  = document.getElementById("itemDesc");
-  const itemPhoto = document.getElementById("itemPhoto");
-  const itemAvail = document.getElementById("itemAvailable");
-
-  // --- UI: abrir/fechar modal ---
-  function openModal(kind) {
-    document.getElementById("modalTitle").textContent =
-      kind === "add" ? "Adicionar" : kind === "edit" ? "Editar" : "Excluir";
-    selAction.value = kind;
-    // defaults
-    selType.value = "category";
-    fillSelectors();
-    showFields();
-    modalWrap.style.display = "grid";
-  }
-  function closeModal(){ modalWrap.style.display = "none"; }
-
-  // --- carrega menu ---
-  async function loadMenu() {
-    const res = await fetch(`/api/menu?slug=${encodeURIComponent(slug)}`);
-    MENU = await j(res);
-    renderTree();
-    fillSelectors();
-  }
-
-  function renderTree() {
-    if (!MENU) { elMenu.innerHTML = "<div class='muted'>Sem dados</div>"; return; }
-    const onlyActive = elOnlyActive.checked;
-    const onlyAvail  = elOnlyAvail.checked;
-
-    const cats = (MENU.categories || []).slice().sort((a,b) => (a.order||0)-(b.order||0));
-    const ul = document.createElement("ul");
-    ul.className = "tree";
-
-    cats.forEach(c => {
-      if (onlyActive && !c.active) return;
-      const li = document.createElement("li");
-      const box = document.createElement("div");
-      box.className = "cat";
-      box.innerHTML = `<strong>#${c.id}</strong> — ${c.name} <span class="muted">(ordem ${c.order||0}, ${c.active?'ativa':'inativa'})</span>`;
-      li.appendChild(box);
-
-      (c.items||[]).forEach(it => {
-        if (onlyAvail && !it.available) return;
-        const row = document.createElement("div");
-        row.className = "item";
-        const price = Number(it.price||0).toFixed(2);
-        row.innerHTML = `<span><strong>#${it.id}</strong> — ${it.name} <span class="muted">R$ ${price}</span></span>
-                         <span class="muted">${it.available?'disponível':'indisponível'}</span>`;
-        li.appendChild(row);
-      });
-
-      ul.appendChild(li);
-    });
-
-    elMenu.innerHTML = "";
-    elMenu.appendChild(ul);
-  }
-
-  function fillSelectors() {
-    // categorias
-    selCat.innerHTML = "";
-    const cats = (MENU?.categories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
-    cats.forEach(c => {
-      const opt = document.createElement("option");
-      opt.value = String(c.id);
-      opt.textContent = `#${c.id} — ${c.name}`;
-      selCat.appendChild(opt);
-    });
-
-    // itens (da categoria selecionada, se houver)
-    fillItems();
-  }
-
-  function fillItems() {
-    selItem.innerHTML = "";
-    const cid = parseInt(selCat.value||0,10);
-    const cat = (MENU?.categories||[]).find(c => Number(c.id)===cid) || null;
-    (cat?.items||[]).forEach(it => {
-      const o = document.createElement("option");
-      o.value = String(it.id);
-      const price = Number(it.price||0).toFixed(2);
-      o.textContent = `#${it.id} — ${it.name} (R$ ${price})`;
-      selItem.appendChild(o);
-    });
-
-    // se for editar item, preenche campos com o item atual
-    if (selType.value === "item" && selAction.value === "edit") {
-      const it = (cat?.items||[]).find(i => String(i.id)===selItem.value) || null;
-      if (it) {
-        itemName.value  = it.name || "";
-        itemDesc.value  = it.desc || "";
-        itemPrice.value = Number(it.price||0).toFixed(2);
-        itemPhoto.value = it.photo_url || "";
-        itemAvail.checked = !!it.available;
-      }
-    }
-  }
-
-  function showFields() {
-    const act = selAction.value; // add|edit|del
-    const typ = selType.value;   // category|item
-
-    // Mostrar/ocultar blocos de acordo com ação/tipo
-    const showCatFields  = (typ === "category" && act !== "del");
-    const showItemFields = (typ === "item"     && act !== "del");
-
-    // categoria campos
-    catName.closest("div").style.display  = showCatFields ? "block" : "none";
-    catOrder.closest("div").style.display = showCatFields ? "block" : "none";
-    catActive.closest("div").style.display= showCatFields ? "block" : "none";
-
-    // item campos
-    itemName.closest("div").style.display  = showItemFields ? "block" : "none";
-    itemPrice.closest("div").style.display = showItemFields ? "block" : "none";
-    itemDesc.closest("div").style.display  = showItemFields ? "block" : "none";
-    itemPhoto.closest("div").style.display = showItemFields ? "block" : "none";
-    itemAvail.closest("div").style.display = showItemFields ? "block" : "none";
-
-    // seletores categoria/item
-    selCat.closest("div").style.display = (typ === "item" || act !== "add") ? "block" : "block";
-    selItem.closest("div").style.display = (typ === "item") ? "block" : "none";
-  }
-
-  // --- ações REST ---
-  async function doConfirm() {
-    const act = selAction.value;
-    const typ = selType.value;
-
-    // CATEGORY
-    if (typ === "category") {
-      if (act === "add") {
-        const payload = {
-          name: (catName.value||"").trim(),
-          order: parseInt(catOrder.value||0,10),
-          active: !!catActive.checked
-        };
-        if (!payload.name) { alert("Informe o nome da categoria"); return; }
-        await j(await fetch(`/api/menu/categories?slug=${encodeURIComponent(slug)}`, { method:"POST", headers, body: JSON.stringify(payload) }));
-      }
-      else if (act === "edit") {
-        const id = parseInt(selCat.value||0,10);
-        if (!id) { alert("Selecione a categoria"); return; }
-        const payload = {};
-        if (catName.value.trim() !== "") payload.name = catName.value.trim();
-        payload.order  = parseInt(catOrder.value||0,10);
-        payload.active = !!catActive.checked;
-        await j(await fetch(`/api/menu/categories/${id}?slug=${encodeURIComponent(slug)}`, { method:"PATCH", headers, body: JSON.stringify(payload) }));
-      }
-      else if (act === "del") {
-        const id = parseInt(selCat.value||0,10);
-        if (!id) { alert("Selecione a categoria"); return; }
-        if (!confirm("Tem certeza que deseja excluir esta categoria (e seus itens)?")) return;
-        await j(await fetch(`/api/menu/categories/${id}?slug=${encodeURIComponent(slug)}`, { method:"DELETE" }));
-      }
-    }
-
-    // ITEM
-    if (typ === "item") {
-      if (act === "add") {
-        const cid = parseInt(selCat.value||0,10);
-        if (!cid) { alert("Selecione a categoria para o item"); return; }
-        const payload = {
-          category_id: cid,
-          name: (itemName.value||"").trim(),
-          desc: (itemDesc.value||"").trim(),
-          price: Number(itemPrice.value||0),
-          photo_url: (itemPhoto.value||"").trim() || null,
-          available: !!itemAvail.checked
-        };
-        if (!payload.name) { alert("Informe o nome do item"); return; }
-        await j(await fetch(`/api/menu/items?slug=${encodeURIComponent(slug)}`, { method:"POST", headers, body: JSON.stringify(payload) }));
-      }
-      else if (act === "edit") {
-        const id  = parseInt(selItem.value||0,10);
-        const cid = parseInt(selCat.value||0,10);
-        if (!id)  { alert("Selecione o item"); return; }
-        const payload = {
-          category_id: cid || undefined,
-          name: (itemName.value||"").trim(),
-          desc: (itemDesc.value||"").trim(),
-          price: Number(itemPrice.value||0),
-          photo_url: (itemPhoto.value||"").trim() || null,
-          available: !!itemAvail.checked
-        };
-        await j(await fetch(`/api/menu/items/${id}?slug=${encodeURIComponent(slug)}`, { method:"PATCH", headers, body: JSON.stringify(payload) }));
-      }
-      else if (act === "del") {
-        const id = parseInt(selItem.value||0,10);
-        if (!id) { alert("Selecione o item"); return; }
-        if (!confirm("Tem certeza que deseja excluir este item?")) return;
-        await j(await fetch(`/api/menu/items/${id}?slug=${encodeURIComponent(slug)}`, { method:"DELETE" }));
-      }
-    }
-
-    await loadMenu();
-    closeModal();
-  }
-
-  // --- eventos ---
-  document.getElementById("btnReload").onclick = loadMenu;
-  document.getElementById("btnAdd").onclick    = () => openModal("add");
-  document.getElementById("btnEdit").onclick   = () => openModal("edit");
-  document.getElementById("btnDel").onclick    = () => openModal("del");
-  document.getElementById("btnCancel").onclick = closeModal;
-  document.getElementById("btnConfirm").onclick= doConfirm;
-
-  selAction.onchange = showFields;
-  selType.onchange   = () => { showFields(); fillItems(); };
-  selCat.onchange    = fillItems;
-  elOnlyActive.onchange = renderTree;
-  elOnlyAvail.onchange  = renderTree;
-
-  // start
-  loadMenu().catch(err => {
-    console.error(err);
-    elMenu.innerHTML = "<div class='muted'>Erro ao carregar o cardápio. Verifique autenticação.</div>";
-  });
-})();
-</script>
+  <!-- cache-bust na importação do JS -->
+  <script src="/static/admin.js?v=20250918101614"></script>
 </body>
 </html>
+
