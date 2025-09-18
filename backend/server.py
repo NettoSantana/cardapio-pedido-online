@@ -720,3 +720,4 @@ except NameError:
 def admin_editor():
     return render_template('admin.html')
 
+

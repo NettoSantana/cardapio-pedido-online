@@ -1,5 +1,6 @@
-﻿fix(server): remover lixo PowerShell do server.py e criar rota /admin estável
+﻿fix(server): limpar linhas PowerShell do server.py e expor /admin
 
-- Limpa linhas com \/\System.Collections.Hashtable que quebravam o parser
-- Adiciona rota /admin retornando templates/admin.html
-- Cache-bust de /static/admin.js no template
+- Remove linhas com \/\System.Collections.Hashtable do Python
+- Garante import render_template
+- Cria rota /admin -> templates/admin.html (app = Flask(...))
+- Cache-bust do /static/admin.js
