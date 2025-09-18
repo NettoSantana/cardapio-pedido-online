@@ -1,5 +1,5 @@
-﻿fix(admin): rota /admin servindo templates/admin.html + render_template import
+﻿fix(server): remover lixo PowerShell do server.py e criar rota /admin estável
 
-- Detecta var do app (app) e injeta rota /admin
-- Garante import render_template
-- Cache-bust em /static/admin.js
+- Limpa linhas com \/\System.Collections.Hashtable que quebravam o parser
+- Adiciona rota /admin retornando templates/admin.html
+- Cache-bust de /static/admin.js no template
