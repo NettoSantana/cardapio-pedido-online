@@ -1,7 +1,6 @@
-﻿fix(server): cabeçalho Flask refeito + imports corretos + rota /admin
+﻿fix(server): rota /admin estável (app ou factory) + limpeza de lixo e cache-bust
 
-- Remove lixo PowerShell do cabeçalho
-- Garante imports: Flask, request, jsonify, abort, send_from_directory, Response, render_template
-- Preserva conteúdo existente a partir de 'app = Flask('
-- Cria rota /admin -> admin.html (se faltava)
-- Cache-bust do /static/admin.js
+- Remove linhas iniciadas por $ que quebravam o parser
+- Se app = Flask(...): injeta rota /admin direta
+- Se create_app(): cria blueprint backend/admin_bp.py e registra no factory
+- Cache-bust em /static/admin.js no template
