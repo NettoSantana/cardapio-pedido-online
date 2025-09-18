@@ -1,6 +1,5 @@
-﻿fix(admin): dedupe de botões Painel/Cardápio e remoção de fontes duplicadas
+﻿fix(admin): página isolada + dedupe inline p/ remover botões duplicados (Painel/Cardápio)
 
-- HOTFIX: filtro de duplicatas por texto/ID na load (garante 1 Painel/1 Cardápio)
-- Limpeza: evitar múltiplas cargas de /static/admin.js
-- Passos de remoção de injeção dinâmica de nav duplicada
-- Cache-bust no admin.js (?v=2025-09-17-1)
+- admin.html com topbar único (#adminTopbar) e script de dedupe
+- cache-bust no /static/admin.js
+- prepend de dedupe no admin.js para reforço

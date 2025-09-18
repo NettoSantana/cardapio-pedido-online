@@ -4,7 +4,10 @@ import itertools
 import time
 import base64
 from datetime import datetime
-from flask import Flask, send_from_directory, jsonify, request, abort, Response
+
+    $imp = $Matches[1]
+    if ($imp -notmatch '\brender_template\b') { "from flask import $imp, render_template" } else { "from flask import $imp" }
+  
 
 # ===== Caminhos base =====
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -788,3 +791,10 @@ def api_menu_save():
         abort(400, "categories deve ser lista")
     save_menu(slug, payload)
     return jsonify({"ok": True})
+
+@app.route('/admin', methods=['GET'])
+def admin_editor():
+    return render_template('admin.html')
+@app.route('/admin', methods=['GET'])
+def admin_editor():
+    return render_template('admin.html')
