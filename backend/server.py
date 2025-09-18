@@ -191,17 +191,18 @@ def index():
 def client_slug(slug: str):
     return send_from_directory(FRONTEND_DIR, "index.html")
 
-# Painel admin (usa templates/admin.html)
+# Painel admin — tenta templates/, cai para frontend/ se não existir
 @app.get("/admin")
 @require_admin
 def admin_page():
-    # se preferir servir do frontend, troque por send_from_directory(FRONTEND_DIR, "admin.html")
-    return render_template("admin.html")
+    tpl = Path(TEMPLATES_DIR) / "admin.html"
+    if tpl.exists():
+        return render_template("admin.html")
+    return send_from_directory(FRONTEND_DIR, "admin.html")
 
 @app.get("/admin-alerts")
 @require_admin
 def admin_alerts_minimal():
-    # se existir um arquivo admin_alerts.html no frontend, pode servir por send_from_directory
     tpl = Path(TEMPLATES_DIR) / "admin_alerts.html"
     if tpl.exists():
         return render_template("admin_alerts.html")
@@ -681,7 +682,6 @@ def admin_debug():
     slug = (request.args.get("slug") or "").strip()
     if not slug:
         abort(400, "slug é obrigatório")
-    # pode usar template se existir
     tpl = Path(TEMPLATES_DIR) / "admin.html"
     if tpl.exists():
         return render_template("admin.html")
