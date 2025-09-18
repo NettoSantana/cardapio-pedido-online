@@ -1,4 +1,21 @@
 ﻿(function(){
+  function isInsideAdminTopbar(el){
+    while(el){ if(el.id==='adminTopbar') return true; el = el.parentElement; }
+    return false;
+  }
+  function dedupe(){
+    var labels = ['painel','cardápio','cardapio'];
+    var btns = Array.from(document.querySelectorAll('button'));
+    btns.forEach(b=>{
+      var t = (b.textContent||'').trim().toLowerCase();
+      if((t==='painel'||t==='cardápio'||t==='cardapio') && !isInsideAdminTopbar(b)){
+        b.remove();
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', dedupe);
+})();
+(function(){
   function dedupeByText(labels){
     labels.forEach(lbl=>{
       const btns = Array.from(document.querySelectorAll('button'))

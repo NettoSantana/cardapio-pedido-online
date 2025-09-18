@@ -1,4 +1,25 @@
-﻿(() => {
+﻿(function(){
+  function dedupeByText(labels){
+    labels.forEach(lbl=>{
+      const btns = Array.from(document.querySelectorAll('button'))
+        .filter(b => (b.textContent||"").trim().toLowerCase() === lbl.toLowerCase());
+      // mantém o primeiro, remove os demais
+      btns.slice(1).forEach(b=> b.remove());
+    });
+  }
+  function dedupeById(ids){
+    ids.forEach(id=>{
+      const els = Array.from(document.querySelectorAll('#'+id+', [id="'+id+'"]'));
+      els.slice(1).forEach(e=> e.remove());
+    });
+  }
+  // Executa cedo, e novamente após DOM pronto
+  document.addEventListener('DOMContentLoaded', ()=>{
+    dedupeByText(['painel','cardápio','cardapio']);
+    dedupeById(['btnPainel','btnCardapio','btnMenu','btnAdmin']);
+  });
+})();
+(() => {
   const $ = sel => document.querySelector(sel);
   const UTF8 = sel => Array.from(document.querySelectorAll(sel));
   const api = {
