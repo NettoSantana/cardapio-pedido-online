@@ -1,175 +1,402 @@
-﻿<!DOCTYPE html>
-<html lang="pt-BR">
+﻿<!doctype html>
+<html lang="pt-br">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <link rel="stylesheet" href="css/admin-spa.css">
-  <script>
-  (function(){
-    function nukeTopAnchors(){
-      var bar = document.getElementById('admin-appbar');
-      if (!bar) return;
-      var body = document.body;
-      // remove até 3 <a> diretos no início do body (breadcrumbs antigos)
-      for (var i=0; i<3; i++){
-        var a = body.querySelector('body > a');
-        if (!a) break;
-        // só remove se estiver acima da appbar
-        var br = bar.getBoundingClientRect();
-        var ar = a.getBoundingClientRect();
-        if (ar.top < br.top) { a.remove(); } else { break; }
-      }
-    }
-    document.addEventListener('DOMContentLoaded', nukeTopAnchors);
-    new MutationObserver(nukeTopAnchors).observe(document.documentElement, {childList:true, subtree:true});
-  })();
-  </script>
-  <script id="nuke-top-links">
-  (function(){
-    // tenta reconhecer a appbar por vários seletores comuns
-    function getAppbar(){
-      return document.querySelector('#admin-appbar, .appbar, [data-appbar]');
-    }
-    function nukeBeforeAppbar(){
-      var bar = getAppbar();
-      if (!bar) return;
-      var body = document.body;
-      // enquanto o primeiro filho do body NÃO for a appbar, remove-o
-      while (body.firstElementChild && body.firstElementChild !== bar){
-        body.firstElementChild.remove();
-      }
-      // se por algum motivo a appbar não for o primeiro, mas existir algo antes dela, remove tudo até ela
-      if (bar && bar.previousElementSibling){
-        var node = bar.previousElementSibling;
-        while(node){
-          var prev = node.previousElementSibling;
-          node.remove();
-          node = prev;
-        }
-      }
-    }
-    document.addEventListener('DOMContentLoaded', nukeBeforeAppbar);
-    new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
-  })();
-  </script>
-  
-  <script id="purge-preheader">
-  (function(){
-    function nukeBeforeFirstHeader(){
-      var body = document.body;
-      var header = document.querySelector('header');
-      if (!body) return;
-
-      // 1) apaga tudo que vier antes do primeiro <header>
-      if (header){
-        while (body.firstElementChild && body.firstElementChild !== header){
-          body.firstElementChild.remove();
-        }
-        var n = header.previousElementSibling;
-        while(n){ var prev = n.previousElementSibling; n.remove(); n = prev; }
-      }
-
-      function looksLikeBad(el){
-        var t = (el.textContent||"").trim().replace(/\s+/g,' ');
-      }
-      Array.from(document.body.children).forEach(function(el){
-        if (el.tagName && el.tagName.toLowerCase()!=='header' && looksLikeBad(el)) el.remove();
-      });
-    }
-    document.addEventListener('DOMContentLoaded', nukeBeforeFirstHeader);
-    new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
-  })();
-  </script>
-  <!-- KILL-TOP-LINKS -->
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Admin • Cardápio</title>
   <style>
-    /* Esconde os 3 primeiros <a> soltos no topo do <body> (os indesejados) */
-    body > a:nth-of-type(1),
-    body > a:nth-of-type(2),
-    body > a:nth-of-type(3) { display:none !important; }
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22c55e; --accent-2:#3b82f6; --danger:#ef4444; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font:500 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    header { padding:16px 20px; border-bottom:1px solid #1f2937; display:flex; gap:10px; align-items:center; }
+    header h1 { margin:0; font-size:18px; font-weight:700; }
+    header .spacer { flex:1 1 auto; }
+    main { max-width:1100px; margin:0 auto; padding:20px; display:grid; grid-template-columns: 1fr 1.2fr; gap:20px; }
+    .card { background:var(--panel); border:1px solid #1f2937; border-radius:12px; padding:14px; }
+    .card h2 { margin:0 0 10px; font-size:16px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .btn { border:1px solid #334155; background:#0b1220; color:var(--text); border-radius:8px; padding:9px 12px; cursor:pointer; }
+    .btn.primary { border-color:#1f2937; background:#0b1329; }
+    .btn.add { border-color:#14532d; background:#0b1f14; }
+    .btn.edit { border-color:#1e3a8a; background:#0b1430; }
+    .btn.del  { border-color:#7f1d1d; background:#2a0b0b; }
+    .btn:hover { filter:brightness(1.1); }
+    .muted { color:var(--muted); font-size:13px; }
 
-    /* Se alguém embrulhou em um contêiner textual antes do header, some também */
-    body > div:first-of-type > a[href], 
-    body > p:first-of-type > a[href] { display:none !important; }
+    ul.tree { list-style:none; padding:0; margin:0; }
+    ul.tree > li { margin:8px 0; }
+    .cat { padding:8px; border:1px dashed #334155; border-radius:8px; }
+    .item { margin:6px 0 0 14px; padding:6px 8px; border:1px solid #253047; border-radius:8px; background:#0b1220; font-size:14px; display:flex; justify-content:space-between; gap:6px; }
+
+    /* Modal */
+    .modal-wrap { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.4); padding:16px; }
+    .modal { width:min(680px, 100%); background:#0b1220; border:1px solid #1f2937; border-radius:12px; padding:16px; }
+    .modal h3 { margin:0 0 12px; font-size:16px; }
+    .grid { display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
+    .grid .full { grid-column:1 / -1; }
+    label { font-size:13px; color:var(--muted); display:block; margin:4px 0; }
+    input, select, textarea { width:100%; border:1px solid #334155; background:#0b1220; color:var(--text); border-radius:8px; padding:8px 10px; }
+    textarea { min-height:80px; resize:vertical; }
+    .actions { display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
+    .pill { display:inline-flex; gap:8px; align-items:center; border:1px solid #334155; padding:6px 8px; border-radius:999px; }
   </style>
-<style id="tabs-pill-css">
-  /* Tabs no estilo do botão Chamados (pílula) */
-  .admin-tabs{ margin-left:12px; display:inline-flex; gap:10px; vertical-align:middle }
-
-  /* força cor/fundo/borda nos links */
-  .admin-tabs .admin-tab,
-  .admin-tabs .admin-tab:link,
-  .admin-tabs .admin-tab:visited{
-    display:inline-block;
-    padding:6px 12px;
-    border-radius:9999px;
-    border:1px solid #d0d7de !important;
-    background:#ffffff !important;
-    color:#0d6efd !important;
-    font-weight:600;
-    text-decoration:none !important;
-    line-height:1;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
-  }
-
-  .admin-tabs .admin-tab:hover{
-    background:#f3f6ff !important;
-    text-decoration:none !important;
-  }
-
-  .admin-tabs .admin-tab.active,
-  .admin-tabs .admin-tab.active:link,
-  .admin-tabs .admin-tab.active:visited{
-    background:#0d6efd !important;
-    border-color:#0d6efd !important;
-    color:#ffffff !important;
-  }
-
-  /* garante alinhamento do título + abas + badge */
-  .topbar h1, header h1, .header h1, .appbar h1, h1{
-    display:inline-block; vertical-align:middle;
-  }
-</style>
 </head>
 <body>
-  <div id="app-admin"></div>
-  <script src="js/admin-spa.js"></script>
-<script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
-  <script src="js/admin-menu-editor.js?v=20250916210846"></script>
+  <header>
+    <h1>Admin • Cardápio</h1>
+    <span class="pill muted">slug: <strong id="slugView"></strong></span>
+    <div class="spacer"></div>
+    <button id="btnReload" class="btn">Recarregar</button>
+    <button id="btnAdd" class="btn add">➕ Adicionar</button>
+    <button id="btnEdit" class="btn edit">✏️ Editar</button>
+    <button id="btnDel"  class="btn del">🗑️ Excluir</button>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Visão atual do cardápio</h2>
+      <div class="muted">Categorias e itens (somente leitura). Selecione abaixo no modal quando quiser alterar.</div>
+      <div id="menuContainer" style="margin-top:10px"></div>
+    </section>
+
+    <section class="card">
+      <h2>Ações rápidas</h2>
+      <div class="row" style="margin-bottom:10px">
+        <label class="pill"><input type="checkbox" id="chkOnlyActive" checked/> Mostrar apenas categorias ativas</label>
+        <label class="pill"><input type="checkbox" id="chkOnlyAvailable" /> Mostrar apenas itens disponíveis</label>
+      </div>
+      <div class="muted">Use os botões do topo para Adicionar/Editar/Excluir. Aqui você só filtra a visualização.</div>
+    </section>
+  </main>
+
+  <!-- Modal único -->
+  <div id="modalWrap" class="modal-wrap">
+    <div class="modal">
+      <h3 id="modalTitle">Ação</h3>
+      <div class="grid">
+        <div>
+          <label>Ação</label>
+          <select id="selAction">
+            <option value="add">Adicionar</option>
+            <option value="edit">Editar</option>
+            <option value="del">Excluir</option>
+          </select>
+        </div>
+        <div>
+          <label>Tipo</label>
+          <select id="selType">
+            <option value="category">Categoria</option>
+            <option value="item">Item</option>
+          </select>
+        </div>
+
+        <div class="full"><hr style="border:none; border-top:1px solid #1f2937"/></div>
+
+        <!-- Seletores -->
+        <div>
+          <label>Categoria (para Item ou p/ escolher qual categoria editar/excluir)</label>
+          <select id="selCategory"></select>
+        </div>
+        <div>
+          <label>Item (quando Tipo = Item)</label>
+          <select id="selItem"></select>
+        </div>
+
+        <div class="full"><hr style="border:none; border-top:1px solid #1f2937"/></div>
+
+        <!-- Campos de categoria -->
+        <div>
+          <label>Nome da categoria</label>
+          <input id="catName" placeholder="ex.: Porções"/>
+        </div>
+        <div>
+          <label>Ordem</label>
+          <input id="catOrder" type="number" min="0" step="1" value="0"/>
+        </div>
+        <div class="full">
+          <label><input type="checkbox" id="catActive" checked/> Categoria ativa</label>
+        </div>
+
+        <!-- Campos de item -->
+        <div>
+          <label>Nome do item</label>
+          <input id="itemName" placeholder="ex.: Batata Frita"/>
+        </div>
+        <div>
+          <label>Preço</label>
+          <input id="itemPrice" type="number" min="0" step="0.01" value="0.00"/>
+        </div>
+        <div class="full">
+          <label>Descrição</label>
+          <textarea id="itemDesc" placeholder="ex.: 300g crocante"></textarea>
+        </div>
+        <div>
+          <label>Foto (URL)</label>
+          <input id="itemPhoto" placeholder="https://..."/>
+        </div>
+        <div>
+          <label><input type="checkbox" id="itemAvailable" checked/> Item disponível</label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnCancel" class="btn">Cancelar</button>
+        <button id="btnConfirm" class="btn primary">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // --- estado ---
+  let MENU = null;
+  const qs  = new URLSearchParams(location.search);
+  const slug = (qs.get("slug") || "").trim() || "bar-do-netto";
+  document.getElementById("slugView").textContent = slug;
+
+  // --- helpers http ---
+  const j = (res) => {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  };
+  const headers = { "Content-Type": "application/json" };
+
+  // --- elementos ---
+  const elMenu = document.getElementById("menuContainer");
+  const elOnlyActive = document.getElementById("chkOnlyActive");
+  const elOnlyAvail  = document.getElementById("chkOnlyAvailable");
+
+  const modalWrap = document.getElementById("modalWrap");
+  const selAction = document.getElementById("selAction");
+  const selType   = document.getElementById("selType");
+  const selCat    = document.getElementById("selCategory");
+  const selItem   = document.getElementById("selItem");
+
+  const catName   = document.getElementById("catName");
+  const catOrder  = document.getElementById("catOrder");
+  const catActive = document.getElementById("catActive");
+
+  const itemName  = document.getElementById("itemName");
+  const itemPrice = document.getElementById("itemPrice");
+  const itemDesc  = document.getElementById("itemDesc");
+  const itemPhoto = document.getElementById("itemPhoto");
+  const itemAvail = document.getElementById("itemAvailable");
+
+  // --- UI: abrir/fechar modal ---
+  function openModal(kind) {
+    document.getElementById("modalTitle").textContent =
+      kind === "add" ? "Adicionar" : kind === "edit" ? "Editar" : "Excluir";
+    selAction.value = kind;
+    // defaults
+    selType.value = "category";
+    fillSelectors();
+    showFields();
+    modalWrap.style.display = "grid";
+  }
+  function closeModal(){ modalWrap.style.display = "none"; }
+
+  // --- carrega menu ---
+  async function loadMenu() {
+    const res = await fetch(`/api/menu?slug=${encodeURIComponent(slug)}`);
+    MENU = await j(res);
+    renderTree();
+    fillSelectors();
+  }
+
+  function renderTree() {
+    if (!MENU) { elMenu.innerHTML = "<div class='muted'>Sem dados</div>"; return; }
+    const onlyActive = elOnlyActive.checked;
+    const onlyAvail  = elOnlyAvail.checked;
+
+    const cats = (MENU.categories || []).slice().sort((a,b) => (a.order||0)-(b.order||0));
+    const ul = document.createElement("ul");
+    ul.className = "tree";
+
+    cats.forEach(c => {
+      if (onlyActive && !c.active) return;
+      const li = document.createElement("li");
+      const box = document.createElement("div");
+      box.className = "cat";
+      box.innerHTML = `<strong>#${c.id}</strong> — ${c.name} <span class="muted">(ordem ${c.order||0}, ${c.active?'ativa':'inativa'})</span>`;
+      li.appendChild(box);
+
+      (c.items||[]).forEach(it => {
+        if (onlyAvail && !it.available) return;
+        const row = document.createElement("div");
+        row.className = "item";
+        const price = Number(it.price||0).toFixed(2);
+        row.innerHTML = `<span><strong>#${it.id}</strong> — ${it.name} <span class="muted">R$ ${price}</span></span>
+                         <span class="muted">${it.available?'disponível':'indisponível'}</span>`;
+        li.appendChild(row);
+      });
+
+      ul.appendChild(li);
+    });
+
+    elMenu.innerHTML = "";
+    elMenu.appendChild(ul);
+  }
+
+  function fillSelectors() {
+    // categorias
+    selCat.innerHTML = "";
+    const cats = (MENU?.categories || []).slice().sort((a,b)=>(a.order||0)-(b.order||0));
+    cats.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = String(c.id);
+      opt.textContent = `#${c.id} — ${c.name}`;
+      selCat.appendChild(opt);
+    });
+
+    // itens (da categoria selecionada, se houver)
+    fillItems();
+  }
+
+  function fillItems() {
+    selItem.innerHTML = "";
+    const cid = parseInt(selCat.value||0,10);
+    const cat = (MENU?.categories||[]).find(c => Number(c.id)===cid) || null;
+    (cat?.items||[]).forEach(it => {
+      const o = document.createElement("option");
+      o.value = String(it.id);
+      const price = Number(it.price||0).toFixed(2);
+      o.textContent = `#${it.id} — ${it.name} (R$ ${price})`;
+      selItem.appendChild(o);
+    });
+
+    // se for editar item, preenche campos com o item atual
+    if (selType.value === "item" && selAction.value === "edit") {
+      const it = (cat?.items||[]).find(i => String(i.id)===selItem.value) || null;
+      if (it) {
+        itemName.value  = it.name || "";
+        itemDesc.value  = it.desc || "";
+        itemPrice.value = Number(it.price||0).toFixed(2);
+        itemPhoto.value = it.photo_url || "";
+        itemAvail.checked = !!it.available;
+      }
+    }
+  }
+
+  function showFields() {
+    const act = selAction.value; // add|edit|del
+    const typ = selType.value;   // category|item
+
+    // Mostrar/ocultar blocos de acordo com ação/tipo
+    const showCatFields  = (typ === "category" && act !== "del");
+    const showItemFields = (typ === "item"     && act !== "del");
+
+    // categoria campos
+    catName.closest("div").style.display  = showCatFields ? "block" : "none";
+    catOrder.closest("div").style.display = showCatFields ? "block" : "none";
+    catActive.closest("div").style.display= showCatFields ? "block" : "none";
+
+    // item campos
+    itemName.closest("div").style.display  = showItemFields ? "block" : "none";
+    itemPrice.closest("div").style.display = showItemFields ? "block" : "none";
+    itemDesc.closest("div").style.display  = showItemFields ? "block" : "none";
+    itemPhoto.closest("div").style.display = showItemFields ? "block" : "none";
+    itemAvail.closest("div").style.display = showItemFields ? "block" : "none";
+
+    // seletores categoria/item
+    selCat.closest("div").style.display = (typ === "item" || act !== "add") ? "block" : "block";
+    selItem.closest("div").style.display = (typ === "item") ? "block" : "none";
+  }
+
+  // --- ações REST ---
+  async function doConfirm() {
+    const act = selAction.value;
+    const typ = selType.value;
+
+    // CATEGORY
+    if (typ === "category") {
+      if (act === "add") {
+        const payload = {
+          name: (catName.value||"").trim(),
+          order: parseInt(catOrder.value||0,10),
+          active: !!catActive.checked
+        };
+        if (!payload.name) { alert("Informe o nome da categoria"); return; }
+        await j(await fetch(`/api/menu/categories?slug=${encodeURIComponent(slug)}`, { method:"POST", headers, body: JSON.stringify(payload) }));
+      }
+      else if (act === "edit") {
+        const id = parseInt(selCat.value||0,10);
+        if (!id) { alert("Selecione a categoria"); return; }
+        const payload = {};
+        if (catName.value.trim() !== "") payload.name = catName.value.trim();
+        payload.order  = parseInt(catOrder.value||0,10);
+        payload.active = !!catActive.checked;
+        await j(await fetch(`/api/menu/categories/${id}?slug=${encodeURIComponent(slug)}`, { method:"PATCH", headers, body: JSON.stringify(payload) }));
+      }
+      else if (act === "del") {
+        const id = parseInt(selCat.value||0,10);
+        if (!id) { alert("Selecione a categoria"); return; }
+        if (!confirm("Tem certeza que deseja excluir esta categoria (e seus itens)?")) return;
+        await j(await fetch(`/api/menu/categories/${id}?slug=${encodeURIComponent(slug)}`, { method:"DELETE" }));
+      }
+    }
+
+    // ITEM
+    if (typ === "item") {
+      if (act === "add") {
+        const cid = parseInt(selCat.value||0,10);
+        if (!cid) { alert("Selecione a categoria para o item"); return; }
+        const payload = {
+          category_id: cid,
+          name: (itemName.value||"").trim(),
+          desc: (itemDesc.value||"").trim(),
+          price: Number(itemPrice.value||0),
+          photo_url: (itemPhoto.value||"").trim() || null,
+          available: !!itemAvail.checked
+        };
+        if (!payload.name) { alert("Informe o nome do item"); return; }
+        await j(await fetch(`/api/menu/items?slug=${encodeURIComponent(slug)}`, { method:"POST", headers, body: JSON.stringify(payload) }));
+      }
+      else if (act === "edit") {
+        const id  = parseInt(selItem.value||0,10);
+        const cid = parseInt(selCat.value||0,10);
+        if (!id)  { alert("Selecione o item"); return; }
+        const payload = {
+          category_id: cid || undefined,
+          name: (itemName.value||"").trim(),
+          desc: (itemDesc.value||"").trim(),
+          price: Number(itemPrice.value||0),
+          photo_url: (itemPhoto.value||"").trim() || null,
+          available: !!itemAvail.checked
+        };
+        await j(await fetch(`/api/menu/items/${id}?slug=${encodeURIComponent(slug)}`, { method:"PATCH", headers, body: JSON.stringify(payload) }));
+      }
+      else if (act === "del") {
+        const id = parseInt(selItem.value||0,10);
+        if (!id) { alert("Selecione o item"); return; }
+        if (!confirm("Tem certeza que deseja excluir este item?")) return;
+        await j(await fetch(`/api/menu/items/${id}?slug=${encodeURIComponent(slug)}`, { method:"DELETE" }));
+      }
+    }
+
+    await loadMenu();
+    closeModal();
+  }
+
+  // --- eventos ---
+  document.getElementById("btnReload").onclick = loadMenu;
+  document.getElementById("btnAdd").onclick    = () => openModal("add");
+  document.getElementById("btnEdit").onclick   = () => openModal("edit");
+  document.getElementById("btnDel").onclick    = () => openModal("del");
+  document.getElementById("btnCancel").onclick = closeModal;
+  document.getElementById("btnConfirm").onclick= doConfirm;
+
+  selAction.onchange = showFields;
+  selType.onchange   = () => { showFields(); fillItems(); };
+  selCat.onchange    = fillItems;
+  elOnlyActive.onchange = renderTree;
+  elOnlyAvail.onchange  = renderTree;
+
+  // start
+  loadMenu().catch(err => {
+    console.error(err);
+    elMenu.innerHTML = "<div class='muted'>Erro ao carregar o cardápio. Verifique autenticação.</div>";
+  });
+})();
+</script>
 </body>
 </html>
-<!-- header-brand (branding) -->
-<div class="header-brand">
-  <img src="img/logo.png" alt="Logo" onerror="this.style.display=\"none\"">
-  <div class="title">Bar do Netto</div>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
