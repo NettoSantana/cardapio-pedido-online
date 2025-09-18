@@ -1,1 +1,1 @@
-﻿web: PYTHONPATH=backend waitress-serve --host=0.0.0.0 --port=$PORT server:app
+﻿web: waitress-serve --port %PORT% backend.server:app
