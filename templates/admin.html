@@ -1,4 +1,4 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"/>
@@ -10,11 +10,11 @@
       var bar = document.getElementById('admin-appbar');
       if (!bar) return;
       var body = document.body;
-      // remove at√© 3 <a> diretos no in√≠cio do body (breadcrumbs antigos)
+      // remove atÈ 3 <a> diretos no inÌcio do body (breadcrumbs antigos)
       for (var i=0; i<3; i++){
         var a = body.querySelector('body > a');
         if (!a) break;
-        // s√≥ remove se estiver acima da appbar
+        // sÛ remove se estiver acima da appbar
         var br = bar.getBoundingClientRect();
         var ar = a.getBoundingClientRect();
         if (ar.top < br.top) { a.remove(); } else { break; }
@@ -24,9 +24,9 @@
     new MutationObserver(nukeTopAnchors).observe(document.documentElement, {childList:true, subtree:true});
   })();
   </script>
-  <script id="nuke-top-links">
+  <!-- <script id="nuke-top-links">
   (function(){
-    // tenta reconhecer a appbar por v√°rios seletores comuns
+    // tenta reconhecer a appbar por v·rios seletores comuns
     function getAppbar(){
       return document.querySelector('#admin-appbar, .appbar, [data-appbar]');
     }
@@ -34,11 +34,11 @@
       var bar = getAppbar();
       if (!bar) return;
       var body = document.body;
-      // enquanto o primeiro filho do body N√ÉO for a appbar, remove-o
+      // enquanto o primeiro filho do body N√O for a appbar, remove-o
       while (body.firstElementChild && body.firstElementChild !== bar){
         body.firstElementChild.remove();
       }
-      // se por algum motivo a appbar n√£o for o primeiro, mas existir algo antes dela, remove tudo at√© ela
+      // se por algum motivo a appbar n„o for o primeiro, mas existir algo antes dela, remove tudo atÈ ela
       if (bar && bar.previousElementSibling){
         var node = bar.previousElementSibling;
         while(node){
@@ -51,9 +51,9 @@
     document.addEventListener('DOMContentLoaded', nukeBeforeAppbar);
     new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
   })();
-  </script>
+  </script> -->
   
-  <script id="purge-preheader">
+  <!-- <script id="purge-preheader">
   (function(){
     function nukeBeforeFirstHeader(){
       var body = document.body;
@@ -79,23 +79,23 @@
     document.addEventListener('DOMContentLoaded', nukeBeforeFirstHeader);
     new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
   })();
-  </script>
+  </script> -->
   <!-- KILL-TOP-LINKS -->
   <style>
-    /* Esconde os 3 primeiros <a> soltos no topo do <body> (os indesejados) */
+    /* (desativado) /* Esconde os 3 primeiros <a> soltos no topo do <body> (os indesejados) */
     body > a:nth-of-type(1),
     body > a:nth-of-type(2),
     body > a:nth-of-type(3) { display:none !important; }
 
-    /* Se algu√©m embrulhou em um cont√™iner textual antes do header, some tamb√©m */
+    /* Se alguÈm embrulhou em um contÍiner textual antes do header, some tambÈm */ */
     body > div:first-of-type > a[href], 
     body > p:first-of-type > a[href] { display:none !important; }
   </style>
 <style id="tabs-pill-css">
-  /* Tabs no estilo do bot√£o Chamados (p√≠lula) */
+  /* Tabs no estilo do bot„o Chamados (pÌlula) */
   .admin-tabs{ margin-left:12px; display:inline-flex; gap:10px; vertical-align:middle }
 
-  /* for√ßa cor/fundo/borda nos links */
+  /* forÁa cor/fundo/borda nos links */
   .admin-tabs .admin-tab,
   .admin-tabs .admin-tab:link,
   .admin-tabs .admin-tab:visited{
@@ -124,7 +124,7 @@
     color:#ffffff !important;
   }
 
-  /* garante alinhamento do t√≠tulo + abas + badge */
+  /* garante alinhamento do tÌtulo + abas + badge */
   .topbar h1, header h1, .header h1, .appbar h1, h1{
     display:inline-block; vertical-align:middle;
   }
@@ -133,7 +133,7 @@
 <body>
   <div id="app-admin"></div>
   <script src="js/admin-spa.js"></script>
-<script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
+  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
   <script src="js/admin-menu-editor.js?v=20250916210846"></script>
 </body>
 </html>
@@ -172,16 +172,16 @@
 
 
 
-<!-- Card√°pio Modal START -->
+<!-- Card·pio Modal START -->
 <div id="cardapio-modal" class="cpio-modal" style="display:none">
   <div class="cpio-dialog">
     <div class="cpio-header">
-      <strong>Card√°pio</strong>
+      <strong>Card·pio</strong>
       <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
     </div>
     <div class="cpio-body">
       <div class="cpio-toolbar">
-        <input id="cpio-q" placeholder="Buscar por nome ou descri√ß√£o" />
+        <input id="cpio-q" placeholder="Buscar por nome ou descriÁ„o" />
         <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
         <button id="cpio-add-item" class="cpio-btn">+ Item</button>
       </div>
@@ -205,7 +205,7 @@
   const modal = document.getElementById('cardapio-modal');
   const byText = (t) => Array.from(document.querySelectorAll('button,a'))
     .find(el => el.textContent.trim().toLowerCase() === t);
-  const openBtn = byText('card√°pio') || byText('cardapio');
+  const openBtn = byText('card·pio') || byText('cardapio');
 
   let state = { slug: new URLSearchParams(location.search).get('slug') || '', menu: null, catId: null, q:'' };
 
@@ -278,7 +278,7 @@
       div.innerHTML = `
         <div class="cpio-row">
           <div style="font-weight:600">${it.name||''}</div>
-          <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indispon√≠vel'}</div>
+          <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'IndisponÌvel'}</div>
         </div>
         <div class="cpio-muted">${it.desc||''}</div>
         <div class="cpio-row">
@@ -326,17 +326,17 @@
 .cpio-muted{color:#94a3b8;font-size:12px}
 @media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
 </style>
-<!-- Card√°pio Modal END -->
-<!-- Card√°pio Modal START -->
+<!-- Card·pio Modal END -->
+<!-- Card·pio Modal START -->
 <div id="cardapio-modal" class="cpio-modal" style="display:none">
   <div class="cpio-dialog">
     <div class="cpio-header">
-      <strong>Card√°pio</strong>
+      <strong>Card·pio</strong>
       <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
     </div>
     <div class="cpio-body">
       <div class="cpio-toolbar">
-        <input id="cpio-q" placeholder="Buscar por nome ou descri√ß√£o" />
+        <input id="cpio-q" placeholder="Buscar por nome ou descriÁ„o" />
         <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
         <button id="cpio-add-item" class="cpio-btn">+ Item</button>
       </div>
@@ -364,13 +364,13 @@
   function hide() { modal.style.display = 'none'; document.body.style.overflow=''; }
   function onEsc(e){ if(e.key==='Escape'){ hide(); document.removeEventListener('keydown', onEsc); } }
 
-  // 1) Tenta achar o bot√£o/anchor com texto "Card√°pio" (tolerante)
+  // 1) Tenta achar o bot„o/anchor com texto "Card·pio" (tolerante)
   function findOpenBtn(){
     const nodes = Array.from(document.querySelectorAll('button,a,[role="button"],.btn'));
-    return nodes.find(el => /card[a√°]pio/i.test((el.textContent||'').trim()));
+    return nodes.find(el => /card[a·]pio/i.test((el.textContent||'').trim()));
   }
 
-  // 2) Liga no bot√£o se existir; se n√£o, usa delega√ß√£o global de clique
+  // 2) Liga no bot„o se existir; se n„o, usa delegaÁ„o global de clique
   function wireOpen(){
     const btn = findOpenBtn();
     const open = (ev) => {
@@ -380,12 +380,12 @@
       if (!state.menu) loadMenu().catch(console.error);
     };
     if (btn) btn.addEventListener('click', open);
-    // delega√ß√£o: qualquer clique cujo alvo tenha texto "Card√°pio"
+    // delegaÁ„o: qualquer clique cujo alvo tenha texto "Card·pio"
     document.addEventListener('click', (e)=>{
       const t = e.target;
       if (!t) return;
       const txt = (t.textContent||'').trim();
-      if (/card[a√°]pio/i.test(txt)) { open(e); }
+      if (/card[a·]pio/i.test(txt)) { open(e); }
     }, true);
   }
 
@@ -446,7 +446,7 @@
       div.innerHTML = `
         <div class="cpio-row">
           <div style="font-weight:600">${it.name||''}</div>
-          <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indispon√≠vel'}</div>
+          <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'IndisponÌvel'}</div>
         </div>
         <div class="cpio-muted">${it.desc||''}</div>
         <div class="cpio-row">
@@ -468,7 +468,7 @@
     if (e.target && e.target.id === 'cpio-q') { state.q = e.target.value; renderItems(); }
   });
 
-  // garante que a DOM existe antes de procurar bot√µes
+  // garante que a DOM existe antes de procurar botıes
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wireOpen);
   } else {
@@ -501,4 +501,4 @@
 .cpio-muted{color:#94a3b8;font-size:12px}
 @media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
 </style>
-<!-- Card√°pio Modal END -->
+<!-- Card·pio Modal END -->
