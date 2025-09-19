@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Admin • Bar do Netto</title>
+  <title>Admin â€¢ Bar do Netto</title>
   <link rel="stylesheet" href="css/admin-spa.css">
 
   <style>
-    /* --------- Cardápio (Modal) --------- */
+    /* --------- CardÃ¡pio (Modal) --------- */
     .cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
     .cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
     .cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
@@ -31,7 +31,7 @@
     .cpio-muted{color:#94a3b8;font-size:12px}
     @media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
 
-    /* --------- FAB (botão fixo Cardápio) --------- */
+    /* --------- FAB (botÃ£o fixo CardÃ¡pio) --------- */
     #cpio-fab{position:fixed;right:16px;bottom:16px;z-index:9998}
     #cpio-fab button{
       padding:10px 14px;border-radius:9999px;border:1px solid #1f2937;
@@ -45,21 +45,21 @@
   <!-- SPA container -->
   <div id="app-admin"></div>
 
-  <!-- scripts do admin (somente os necessários) -->
+  <!-- scripts do admin (somente os necessÃ¡rios) -->
   <script src="js/admin-spa.js"></script>
   <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
   <script src="js/admin-menu-editor.js?v=20250916210846"></script>
 
-  <!-- Cardápio Modal (ÚNICO) -->
+  <!-- CardÃ¡pio Modal (ÃšNICO) -->
   <div id="cardapio-modal" class="cpio-modal" aria-hidden="true">
-    <div class="cpio-dialog" role="dialog" aria-modal="true" aria-label="Cardápio">
+    <div class="cpio-dialog" role="dialog" aria-modal="true" aria-label="CardÃ¡pio">
       <div class="cpio-header">
-        <strong>Cardápio</strong>
+        <strong>CardÃ¡pio</strong>
         <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
       </div>
       <div class="cpio-body">
         <div class="cpio-toolbar">
-          <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
+          <input id="cpio-q" placeholder="Buscar por nome ou descriÃ§Ã£o" />
           <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
           <button id="cpio-add-item" class="cpio-btn">+ Item</button>
         </div>
@@ -152,7 +152,7 @@
         div.innerHTML = `
           <div class="cpio-row">
             <div style="font-weight:600">${it.name||''}</div>
-            <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indisponível'}</div>
+            <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'IndisponÃ­vel'}</div>
           </div>
           <div class="cpio-muted">${it.desc||''}</div>
           <div class="cpio-row">
@@ -177,15 +177,15 @@
 
     // ---------- acionadores ----------
     function findOpenBtn(){
-      // tenta achar um botão/aba existente chamado "Cardápio"
+      // tenta achar um botÃ£o/aba existente chamado "CardÃ¡pio"
       const nodes = Array.from(document.querySelectorAll('button,a,[role="button"],.btn'));
-      return nodes.find(el => /card[aá]pio/i.test((el.textContent||'').trim()));
+      return nodes.find(el => /card[aÃ¡]pio/i.test((el.textContent||'').trim()));
     }
     function ensureFab(){
       if (document.getElementById('cpio-fab')) return;
       const wrap = document.createElement('div');
       wrap.id = 'cpio-fab';
-      wrap.innerHTML = '<button type="button" aria-label="Abrir Cardápio">Cardápio</button>';
+      wrap.innerHTML = '<button type="button" aria-label="Abrir CardÃ¡pio">CardÃ¡pio</button>';
       document.body.appendChild(wrap);
       return $('button', wrap);
     }
@@ -202,12 +202,12 @@
       if (!trigger) { trigger = ensureFab(); }
       if (trigger) trigger.addEventListener('click', openHandler, {passive:false});
 
-      // Delegação defensiva (se o UI recriar o botão depois)
+      // DelegaÃ§Ã£o defensiva (se o UI recriar o botÃ£o depois)
       document.addEventListener('click', (e)=>{
         const t = e.target;
         if (!t) return;
         const txt = (t.textContent||'').trim();
-        if (/card[aá]pio/i.test(txt)) { openHandler(e); }
+        if (/card[aÃ¡]pio/i.test(txt)) { openHandler(e); }
       }, true);
     }
 
@@ -219,5 +219,9 @@
     }
   })();
   </script>
+<script src="js/cpio-wire.js?v=20250919110154"></script>
 </body>
 </html>
+
+
+
