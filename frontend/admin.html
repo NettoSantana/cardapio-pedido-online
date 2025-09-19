@@ -24,74 +24,7 @@
     new MutationObserver(nukeTopAnchors).observe(document.documentElement, {childList:true, subtree:true});
   })();
   </script>
-  <script id="nuke-top-links">
-  (function(){
-    // tenta reconhecer a appbar por vários seletores comuns
-    function getAppbar(){
-      return document.querySelector('#admin-appbar, .appbar, [data-appbar]');
-    }
-    function nukeBeforeAppbar(){
-      var bar = getAppbar();
-      if (!bar) return;
-      var body = document.body;
-      // enquanto o primeiro filho do body NÃO for a appbar, remove-o
-      while (body.firstElementChild && body.firstElementChild !== bar){
-        body.firstElementChild.remove();
-      }
-      // se por algum motivo a appbar não for o primeiro, mas existir algo antes dela, remove tudo até ela
-      if (bar && bar.previousElementSibling){
-        var node = bar.previousElementSibling;
-        while(node){
-          var prev = node.previousElementSibling;
-          node.remove();
-          node = prev;
-        }
-      }
-    }
-    document.addEventListener('DOMContentLoaded', nukeBeforeAppbar);
-    new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
-  })();
-  </script>
-  
-  <script id="purge-preheader">
-  (function(){
-    function nukeBeforeFirstHeader(){
-      var body = document.body;
-      var header = document.querySelector('header');
-      if (!body) return;
-
-      // 1) apaga tudo que vier antes do primeiro <header>
-      if (header){
-        while (body.firstElementChild && body.firstElementChild !== header){
-          body.firstElementChild.remove();
-        }
-        var n = header.previousElementSibling;
-        while(n){ var prev = n.previousElementSibling; n.remove(); n = prev; }
-      }
-
-      function looksLikeBad(el){
-        var t = (el.textContent||"").trim().replace(/\s+/g,' ');
-      }
-      Array.from(document.body.children).forEach(function(el){
-        if (el.tagName && el.tagName.toLowerCase()!=='header' && looksLikeBad(el)) el.remove();
-      });
-    }
-    document.addEventListener('DOMContentLoaded', nukeBeforeFirstHeader);
-    new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
-  })();
-  </script>
-  <!-- KILL-TOP-LINKS -->
-  <style>
-    /* Esconde os 3 primeiros <a> soltos no topo do <body> (os indesejados) */
-    body > a:nth-of-type(1),
-    body > a:nth-of-type(2),
-    body > a:nth-of-type(3) { display:none !important; }
-
-    /* Se alguém embrulhou em um contêiner textual antes do header, some também */
-    body > div:first-of-type > a[href], 
-    body > p:first-of-type > a[href] { display:none !important; }
-  </style>
-<style id="tabs-pill-css">
+  <style id="tabs-pill-css">
   /* Tabs no estilo do botão Chamados (pílula) */
   .admin-tabs{ margin-left:12px; display:inline-flex; gap:10px; vertical-align:middle }
 
@@ -142,6 +75,7 @@
   <img src="img/logo.png" alt="Logo" onerror="this.style.display=\"none\"">
   <div class="title">Bar do Netto</div>
 </div>
+
 
 
 
