@@ -43,6 +43,12 @@
     display:inline-block; vertical-align:middle;
   }
 </style>
+<style id="btn-cardapio-shield-css">
+/* nunca esconder o Cardápio */
+#btn-cardapio{display:inline-block!important;visibility:visible!important;opacity:1!important}
+body > a#btn-cardapio{display:inline-block!important}
+body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
+</style>
 </head>
 <body>
   <div id="app-admin"></div>
@@ -93,6 +99,58 @@
     }
   });
   try { obs.observe(document.body, {childList:true}); } catch(e){}
+})();
+</script>
+<script id="btn-cardapio-shield-js">
+(function(){
+  function findCardapio(){
+    var nodes = Array.from(document.querySelectorAll('a,button'));
+    return nodes.find(function(el){
+      var t = (el.textContent||'').trim().toLowerCase();
+      return t === 'cardápio' || t === 'cardapio';
+    });
+  }
+  function mark(el){
+    if(!el) return;
+    el.id = 'btn-cardapio';
+    el.setAttribute('data-keep','1');
+    try{ el.setAttribute('href','#'); }catch(e){}
+    el.style.display = 'inline-block';
+  }
+  function wire(el){
+    if(!el || el._cpioWired) return;
+    el._cpioWired = true;
+    el.addEventListener('click', function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      var modal = document.getElementById('cardapio-modal');
+      if (modal){
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(e){}
+      }
+      return false;
+    }, true);
+  }
+  function keepVisible(el){
+    if(!el) return;
+    // se alguma regra teimar em esconder, força mostrar
+    if (getComputedStyle(el).display === 'none') {
+      el.style.display = 'inline-block';
+    }
+  }
+  function tick(){
+    var el = document.getElementById('btn-cardapio') || findCardapio();
+    if (!el) return;
+    mark(el);
+    wire(el);
+    keepVisible(el);
+  }
+  // primeira passada
+  document.addEventListener('DOMContentLoaded', tick);
+  // roda logo também (caso já esteja carregado)
+  try{ tick(); }catch(e){}
+  // e toda vez que o DOM mudar
+  new MutationObserver(tick).observe(document.body, {childList:true, subtree:true});
 })();
 </script>
 </body>
@@ -176,6 +234,7 @@
   }, 250);
 })();
 </script>
+
 
 
 
