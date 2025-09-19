@@ -48,7 +48,53 @@
   <div id="app-admin"></div>
   <script src="js/admin-spa.js"></script>
 <script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
-  <script src="js/admin-menu-editor.js?v=20250916210846"></script>
+  
+<script id="cardapio-modal-hook">
+(function(){
+  var modal = document.getElementById('cardapio-modal');
+  if (!modal) return;
+
+  var dialog = modal.querySelector('.cpio-dialog');
+  if (dialog){
+    dialog.addEventListener('click', function(e){ e.stopPropagation(); }, true);
+  }
+
+  function show(){ if(modal){ modal.style.display='block'; document.body.style.overflow='hidden'; } }
+  function hide(){ if(modal){ modal.style.display='none';  document.body.style.overflow=''; } }
+  modal.addEventListener('click', function(e){ if(e.target===modal) hide(); });
+  var closeBtn = modal.querySelector('.cpio-close');
+  if (closeBtn) closeBtn.addEventListener('click', hide);
+
+  // Botão "Cardápio" – por id ou por texto
+  function byText(t){
+    t = (t||'').toLowerCase();
+    var candidates = Array.from(document.querySelectorAll('a,button'));
+    return candidates.find(function(el){ return (el.textContent||'').trim().toLowerCase() === t; });
+  }
+  var openBtn = document.getElementById('btn-cardapio') || byText('cardápio') || byText('cardapio');
+  if (openBtn){
+    openBtn.addEventListener('click', function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      show();
+      // dispara evento para o script do modal carregar dados se precisar
+      try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(e){}
+      return false;
+    }, true);
+    // Evita navegação por atributo href
+    try{ openBtn.setAttribute('href', '#'); }catch(e){}
+  }
+
+  // Watchdog: se alguém remover o modal enquanto aberto, coloca de volta
+  var obs = new MutationObserver(function(){
+    var inDom = document.body.contains(modal);
+    var opened = modal && modal.style.display === 'block';
+    if (opened && !inDom){
+      document.body.appendChild(modal);
+    }
+  });
+  try { obs.observe(document.body, {childList:true}); } catch(e){}
+})();
+</script>
 </body>
 </html>
 <!-- header-brand (branding) -->
@@ -130,5 +176,6 @@
   }, 250);
 })();
 </script>
+
 
 
