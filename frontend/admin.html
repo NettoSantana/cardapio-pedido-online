@@ -1,356 +1,223 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin • Bar do Netto</title>
   <link rel="stylesheet" href="css/admin-spa.css">
-  
-  <style id="tabs-pill-css">
-  /* Tabs no estilo do botão Chamados (pílula) */
-  .admin-tabs{ margin-left:12px; display:inline-flex; gap:10px; vertical-align:middle }
 
-  /* força cor/fundo/borda nos links */
-  .admin-tabs .admin-tab,
-  .admin-tabs .admin-tab:link,
-  .admin-tabs .admin-tab:visited{
-    display:inline-block;
-    padding:6px 12px;
-    border-radius:9999px;
-    border:1px solid #d0d7de !important;
-    background:#ffffff !important;
-    color:#0d6efd !important;
-    font-weight:600;
-    text-decoration:none !important;
-    line-height:1;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
-  }
+  <style>
+    /* --------- Cardápio (Modal) --------- */
+    .cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
+    .cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
+    .cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
+    .cpio-close{background:transparent;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e5e7eb;cursor:pointer}
+    .cpio-body{padding:12px}
+    .cpio-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .cpio-panel{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px}
+    .cpio-grid{display:grid;grid-template-columns:260px 1fr;gap:12px}
+    #cpio-q{flex:1;min-width:220px;padding:8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
+    .cpio-cats{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+    .cpio-cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
+    .cpio-cat.active{outline:2px solid #2563eb}
+    .cpio-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .cpio-card{border:1px solid #1f2937;border-radius:10px;background:#0b1020;padding:10px;display:flex;flex-direction:column;gap:6px}
+    .cpio-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .cpio-pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
+    .cpio-pill.ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
+    .cpio-pill.off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
+    .cpio-price{font-weight:700}
+    .cpio-empty{padding:24px;text-align:center;color:#94a3b8}
+    .cpio-muted{color:#94a3b8;font-size:12px}
+    @media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
 
-  .admin-tabs .admin-tab:hover{
-    background:#f3f6ff !important;
-    text-decoration:none !important;
-  }
-
-  .admin-tabs .admin-tab.active,
-  .admin-tabs .admin-tab.active:link,
-  .admin-tabs .admin-tab.active:visited{
-    background:#0d6efd !important;
-    border-color:#0d6efd !important;
-    color:#ffffff !important;
-  }
-
-  /* garante alinhamento do título + abas + badge */
-  .topbar h1, header h1, .header h1, .appbar h1, h1{
-    display:inline-block; vertical-align:middle;
-  }
-</style>
-<style id="btn-cardapio-shield-css">
-/* nunca esconder o Cardápio */
-#btn-cardapio{display:inline-block!important;visibility:visible!important;opacity:1!important}
-body > a#btn-cardapio{display:inline-block!important}
-body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
-</style>
+    /* --------- FAB (botão fixo Cardápio) --------- */
+    #cpio-fab{position:fixed;right:16px;bottom:16px;z-index:9998}
+    #cpio-fab button{
+      padding:10px 14px;border-radius:9999px;border:1px solid #1f2937;
+      background:linear-gradient(180deg,#1f51ff,#0ea5e9);color:#fff;font-weight:600;
+      box-shadow:0 8px 24px rgba(0,0,0,.2); cursor:pointer
+    }
+    #cpio-fab button:active{transform:translateY(1px)}
+  </style>
 </head>
 <body>
+  <!-- SPA container -->
   <div id="app-admin"></div>
+
+  <!-- scripts do admin (somente os necessários) -->
   <script src="js/admin-spa.js"></script>
-<script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
-  
-<script id="cardapio-modal-hook">
-(function(){
-  var modal = document.getElementById('cardapio-modal');
-  if (!modal) return;
+  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
+  <script src="js/admin-menu-editor.js?v=20250916210846"></script>
 
-  var dialog = modal.querySelector('.cpio-dialog');
-  if (dialog){
-    dialog.addEventListener('click', function(e){ e.stopPropagation(); }, true);
-  }
-
-  function show(){ if(modal){ modal.style.display='block'; document.body.style.overflow='hidden'; } }
-  function hide(){ if(modal){ modal.style.display='none';  document.body.style.overflow=''; } }
-  modal.addEventListener('click', function(e){ if(e.target===modal) hide(); });
-  var closeBtn = modal.querySelector('.cpio-close');
-  if (closeBtn) closeBtn.addEventListener('click', hide);
-
-  // Botão "Cardápio" – por id ou por texto
-  function byText(t){
-    t = (t||'').toLowerCase();
-    var candidates = Array.from(document.querySelectorAll('a,button'));
-    return candidates.find(function(el){ return (el.textContent||'').trim().toLowerCase() === t; });
-  }
-  var openBtn = document.getElementById('btn-cardapio') || byText('cardápio') || byText('cardapio');
-  if (openBtn){
-    openBtn.addEventListener('click', function(ev){
-      ev.preventDefault(); ev.stopPropagation();
-      show();
-      // dispara evento para o script do modal carregar dados se precisar
-      try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(e){}
-      return false;
-    }, true);
-    // Evita navegação por atributo href
-    try{ openBtn.setAttribute('href', '#'); }catch(e){}
-  }
-
-  // Watchdog: se alguém remover o modal enquanto aberto, coloca de volta
-  var obs = new MutationObserver(function(){
-    var inDom = document.body.contains(modal);
-    var opened = modal && modal.style.display === 'block';
-    if (opened && !inDom){
-      document.body.appendChild(modal);
-    }
-  });
-  try { obs.observe(document.body, {childList:true}); } catch(e){}
-})();
-</script>
-<script id="btn-cardapio-shield-js">
-(function(){
-  function findCardapio(){
-    var nodes = Array.from(document.querySelectorAll('a,button'));
-    return nodes.find(function(el){
-      var t = (el.textContent||'').trim().toLowerCase();
-      return t === 'cardápio' || t === 'cardapio';
-    });
-  }
-  function mark(el){
-    if(!el) return;
-    el.id = 'btn-cardapio';
-    el.setAttribute('data-keep','1');
-    try{ el.setAttribute('href','#'); }catch(e){}
-    el.style.display = 'inline-block';
-  }
-  function wire(el){
-    if(!el || el._cpioWired) return;
-    el._cpioWired = true;
-    el.addEventListener('click', function(ev){
-      ev.preventDefault(); ev.stopPropagation();
-      var modal = document.getElementById('cardapio-modal');
-      if (modal){
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(e){}
-      }
-      return false;
-    }, true);
-  }
-  function keepVisible(el){
-    if(!el) return;
-    // se alguma regra teimar em esconder, força mostrar
-    if (getComputedStyle(el).display === 'none') {
-      el.style.display = 'inline-block';
-    }
-  }
-  function tick(){
-    var el = document.getElementById('btn-cardapio') || findCardapio();
-    if (!el) return;
-    mark(el);
-    wire(el);
-    keepVisible(el);
-  }
-  // primeira passada
-  document.addEventListener('DOMContentLoaded', tick);
-  // roda logo também (caso já esteja carregado)
-  try{ tick(); }catch(e){}
-  // e toda vez que o DOM mudar
-  new MutationObserver(tick).observe(document.body, {childList:true, subtree:true});
-})();
-</script>
-
-<!-- Cardápio Modal (fallback se não existir) -->
-<div id="cardapio-modal" class="cpio-modal" style="display:none">
-  <div class="cpio-dialog">
-    <div class="cpio-header">
-      <strong>Cardápio</strong>
-      <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
-    </div>
-    <div class="cpio-body">
-      <div class="cpio-toolbar">
-        <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
-        <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
-        <button id="cpio-add-item" class="cpio-btn">+ Item</button>
+  <!-- Cardápio Modal (ÚNICO) -->
+  <div id="cardapio-modal" class="cpio-modal" aria-hidden="true">
+    <div class="cpio-dialog" role="dialog" aria-modal="true" aria-label="Cardápio">
+      <div class="cpio-header">
+        <strong>Cardápio</strong>
+        <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
       </div>
-      <div class="cpio-grid">
-        <section class="cpio-panel">
-          <div class="cpio-muted">Categorias</div>
-          <div id="cpio-cats" class="cpio-cats"></div>
-        </section>
-        <section class="cpio-panel">
-          <div class="cpio-muted">Itens</div>
-          <div id="cpio-items" class="cpio-items"></div>
-          <div id="cpio-empty" class="cpio-empty" style="display:none">Nenhum item.</div>
-        </section>
+      <div class="cpio-body">
+        <div class="cpio-toolbar">
+          <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
+          <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
+          <button id="cpio-add-item" class="cpio-btn">+ Item</button>
+        </div>
+        <div class="cpio-grid">
+          <section class="cpio-panel">
+            <div class="cpio-muted">Categorias</div>
+            <div id="cpio-cats" class="cpio-cats"></div>
+          </section>
+          <section class="cpio-panel">
+            <div class="cpio-muted">Itens</div>
+            <div id="cpio-items" class="cpio-items"></div>
+            <div id="cpio-empty" class="cpio-empty" style="display:none">Nenhum item.</div>
+          </section>
+        </div>
       </div>
     </div>
   </div>
-</div>
-<script>
-(function(){
-  const modal = document.getElementById('cardapio-modal');
-  if (!modal) return;
-  function hide(){ modal.style.display='none'; document.body.style.overflow=''; }
-  modal.addEventListener('click', (e)=>{ if(e.target===modal) hide(); });
-  var x = modal.querySelector('.cpio-close');
-  if (x) x.addEventListener('click', hide);
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape') hide(); });
-})();
-</script>
-<style>
-.cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
-.cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
-.cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
-.cpio-close{background:transparent;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e5e7eb;cursor:pointer}
-.cpio-body{padding:12px}
-.cpio-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.cpio-panel{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px}
-.cpio-grid{display:grid;grid-template-columns:260px 1fr;gap:12px}
-#cpio-q{flex:1;min-width:220px;padding:8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
-.cpio-cats{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
-.cpio-cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
-.cpio-cat.active{outline:2px solid #2563eb}
-.cpio-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-.cpio-card{border:1px solid #1f2937;border-radius:10px;background:#0b1020;padding:10px;display:flex;flex-direction:column;gap:6px}
-.cpio-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.cpio-pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
-.cpio-pill.ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
-.cpio-pill.off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
-.cpio-price{font-weight:700}
-.cpio-empty{padding:24px;text-align:center;color:#94a3b8}
-.cpio-muted{color:#94a3b8;font-size:12px}
-@media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
-</style>
-<style id="cpio-fab-css">
-  #cpio-fab{position:fixed;right:18px;bottom:18px;z-index:10000}
-  #cpio-fab button{
-    padding:10px 14px;border-radius:9999px;border:1px solid #334155;
-    background:#0d6efd;color:#fff;cursor:pointer;font-weight:600;
-    box-shadow:0 6px 18px rgba(0,0,0,.25)
-  }
-  #cpio-fab button:hover{filter:brightness(1.05)}
-</style>
-<div id="cpio-fab" hidden>
-  <button type="button" id="cpio-fab-btn">Cardápio</button>
-</div>
-<script id="cpio-fab-inject">
-(function(){
-  function ensureFab(){
-    var fab = document.getElementById('cpio-fab');
-    if (!fab){
-      // se alguém deletar, recria
-      fab = document.createElement('div');
-      fab.id = 'cpio-fab';
-      fab.innerHTML = '<button type="button" id="cpio-fab-btn">Cardápio</button>';
-      document.body.appendChild(fab);
+
+  <script>
+  (()=>{
+    // ---------- estado ----------
+    const state = { slug: new URLSearchParams(location.search).get('slug') || '', menu: null, catId: null, q:'' };
+
+    // ---------- util ----------
+    const $  = (sel,root=document)=> root.querySelector(sel);
+    const $$ = (sel,root=document)=> Array.from(root.querySelectorAll(sel));
+    async function fetchJSON(url, opts={}) {
+      const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
     }
-    fab.hidden = false;
-    var btn = document.getElementById('cpio-fab-btn');
-    if (!btn.__cpioBound){
-      btn.addEventListener('click', function(e){
-        e.preventDefault();
-        var m = document.getElementById('cardapio-modal');
-        if (m){
-          m.style.display = 'block';
-          document.body.style.overflow = 'hidden';
-          try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(_){}
-        } else {
-          alert('Modal de Cardápio não encontrado na página.');
-        }
+
+    // ---------- modal ----------
+    const modal   = $('#cardapio-modal');
+    const dlg     = $('.cpio-dialog', modal);
+    const closeBt = $('.cpio-close', modal);
+
+    function show(){ modal.style.display='block'; modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+    function hide(){ modal.style.display='none';  modal.setAttribute('aria-hidden','true');  document.body.style.overflow=''; }
+    function onEsc(e){ if(e.key==='Escape'){ hide(); document.removeEventListener('keydown', onEsc); } }
+
+    modal.addEventListener('click', e => { if (e.target === modal) hide(); });
+    closeBt.addEventListener('click', hide);
+
+    // ---------- dados ----------
+    async function loadMenu() {
+      const url = '/api/menu' + (state.slug ? ('?slug='+encodeURIComponent(state.slug)) : '');
+      state.menu = await fetchJSON(url);
+      if (!state.catId) {
+        const first = (state.menu.categories||[]).find(c=>c.active!==false);
+        state.catId = first ? first.id : null;
+      }
+      renderCats(); renderItems();
+    }
+
+    // ---------- render ----------
+    const catsEl  = () => $('#cpio-cats');
+    const itemsEl = () => $('#cpio-items');
+    const emptyEl = () => $('#cpio-empty');
+
+    function renderCats() {
+      const el = catsEl(); el.innerHTML = '';
+      (state.menu.categories||[])
+        .sort((a,b)=>(a.order||0)-(b.order||0))
+        .forEach(c => {
+          const div = document.createElement('div');
+          div.className = 'cpio-cat' + (state.catId===c.id?' active':'');
+          div.innerHTML = '<div>'+ (c.name||'') +'</div><div class="cpio-muted">#'+c.id+'</div>';
+          div.onclick = () => { state.catId = c.id; renderCats(); renderItems(); };
+          el.appendChild(div);
+        });
+    }
+    function matchesQuery(item){
+      if (!state.q) return true;
+      const q=state.q.toLowerCase();
+      return (item.name||'').toLowerCase().includes(q) || (item.desc||'').toLowerCase().includes(q);
+    }
+    function renderItems(){
+      const iel = itemsEl(); iel.innerHTML = '';
+      let items = [];
+      (state.menu.categories||[]).forEach(c=>{
+        if (state.catId && c.id!==state.catId) return;
+        (c.items||[]).forEach(i=>items.push(Object.assign({_cat:c}, i)));
+      });
+      items = items.filter(matchesQuery);
+      emptyEl().style.display = items.length? 'none':'block';
+      items.forEach(it=>{
+        const div = document.createElement('div');
+        div.className = 'cpio-card';
+        div.innerHTML = `
+          <div class="cpio-row">
+            <div style="font-weight:600">${it.name||''}</div>
+            <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indisponível'}</div>
+          </div>
+          <div class="cpio-muted">${it.desc||''}</div>
+          <div class="cpio-row">
+            <div class="cpio-price">R$ ${Number(it.price||0).toFixed(2)}</div>
+            <div class="cpio-muted">Cat: ${it._cat?.name||''}</div>
+          </div>
+          <div class="cpio-row" style="margin-top:6px">
+            <button class="cpio-btn" data-edit="${it.id}">Editar</button>
+            <button class="cpio-btn" data-del="${it.id}">Excluir</button>
+          </div>`;
+        iel.appendChild(div);
+      });
+      // placeholders
+      $$('#cpio-items [data-edit]').forEach(b=>b.onclick=()=>alert('editar '+b.dataset.edit));
+      $$('#cpio-items [data-del]').forEach(b=>b.onclick=()=>alert('excluir '+b.dataset.del));
+    }
+
+    // ---------- busca ----------
+    document.addEventListener('input', (e)=>{
+      if (e.target && e.target.id === 'cpio-q') { state.q = e.target.value; renderItems(); }
+    });
+
+    // ---------- acionadores ----------
+    function findOpenBtn(){
+      // tenta achar um botão/aba existente chamado "Cardápio"
+      const nodes = Array.from(document.querySelectorAll('button,a,[role="button"],.btn'));
+      return nodes.find(el => /card[aá]pio/i.test((el.textContent||'').trim()));
+    }
+    function ensureFab(){
+      if (document.getElementById('cpio-fab')) return;
+      const wrap = document.createElement('div');
+      wrap.id = 'cpio-fab';
+      wrap.innerHTML = '<button type="button" aria-label="Abrir Cardápio">Cardápio</button>';
+      document.body.appendChild(wrap);
+      return $('button', wrap);
+    }
+    function openHandler(ev){
+      if (ev) ev.preventDefault();
+      show();
+      document.addEventListener('keydown', onEsc);
+      if (!state.menu) loadMenu().catch(console.error);
+    }
+
+    function wireOpen(){
+      const btn = findOpenBtn();
+      let trigger = btn;
+      if (!trigger) { trigger = ensureFab(); }
+      if (trigger) trigger.addEventListener('click', openHandler, {passive:false});
+
+      // Delegação defensiva (se o UI recriar o botão depois)
+      document.addEventListener('click', (e)=>{
+        const t = e.target;
+        if (!t) return;
+        const txt = (t.textContent||'').trim();
+        if (/card[aá]pio/i.test(txt)) { openHandler(e); }
       }, true);
-      btn.__cpioBound = true;
     }
-  }
-  // Monta agora…
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', ensureFab);
-  } else {
-    ensureFab();
-  }
-  // …e remonta se a SPA re-renderizar
-  new MutationObserver(function(){ ensureFab(); })
-    .observe(document.body, {childList:true, subtree:true});
-})();
-</script>
+
+    // inicializa
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wireOpen);
+    } else {
+      wireOpen();
+    }
+  })();
+  </script>
 </body>
 </html>
-<!-- header-brand (branding) -->
-<div class="header-brand">
-  <img src="img/logo.png" alt="Logo" onerror="this.style.display=\"none\"">
-  <div class="title">Bar do Netto</div>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<script id="ensure-cardapio-btn">
-(function(){
-  function ensure(){
-    if (!window.openCardapioModal) return; // espera o modal expor a função
-    // tenta achar uma área de abas/toolbar do admin
-    var bar = document.querySelector('.admin-tabs') 
-           || document.querySelector('#admin-appbar')
-           || document.querySelector('header')
-           || document.body;
-    if (!bar) return;
-    // evita duplicar
-    if (document.getElementById('btn-cardapio-open')) return;
-
-    var btn = document.createElement('button');
-    btn.id = 'btn-cardapio-open';
-    btn.type = 'button';
-    // classes compatíveis com o visual existente (ajuste se quiser)
-    btn.className = 'admin-tab';
-    btn.textContent = 'Cardápio';
-    btn.onclick = function(ev){ ev.preventDefault(); window.openCardapioModal(); };
-
-    // se tiver .admin-tabs, insere lá; senão, no header
-    if (bar.classList && bar.classList.contains('admin-tabs')) {
-      bar.appendChild(btn);
-    } else {
-      // tenta colocar do lado do <h1> se existir
-      var h1 = bar.querySelector('h1');
-      if (h1 && h1.parentNode) {
-        h1.parentNode.insertBefore(btn, h1.nextSibling);
-      } else {
-        bar.appendChild(btn);
-      }
-    }
-  }
-  // tenta algumas vezes pq o SPA monta o header depois
-  var tries = 0, timer = setInterval(function(){
-    tries++;
-    try { ensure(); } catch(e){}
-    if (document.getElementById('btn-cardapio-open') || tries > 40) clearInterval(timer);
-  }, 250);
-})();
-</script>
-
-
-
-
-
-
