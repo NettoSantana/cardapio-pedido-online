@@ -153,6 +153,103 @@ body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
   new MutationObserver(tick).observe(document.body, {childList:true, subtree:true});
 })();
 </script>
+<script id="cardapio-button-inject">
+(function(){
+  function openModal(ev){
+    if (ev) ev.preventDefault();
+    var m = document.getElementById('cardapio-modal');
+    if (m){
+      m.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(e){}
+    }
+  }
+  function mount(){
+    // acha a appbar por seletor amplo
+    var bar = document.querySelector('#admin-appbar, .appbar, header, .topbar, [data-appbar]');
+    if (!bar) return;
+    // evita duplicar
+    if (document.getElementById('btn-cardapio')) return;
+    // cria o botão (não <a>)
+    var btn = document.createElement('button');
+    btn.id = 'btn-cardapio';
+    btn.type = 'button';
+    btn.textContent = 'Cardápio';
+    btn.className = 'btn btn-primary';
+    btn.style.marginLeft = '8px';
+    btn.addEventListener('click', openModal, true);
+    // adiciona no final da appbar
+    bar.appendChild(btn);
+  }
+  // Observa mudanças para recolocar o botão se a UI for recriada
+  new MutationObserver(mount).observe(document.body, {childList:true, subtree:true});
+  document.addEventListener('DOMContentLoaded', mount);
+  // roda já
+  try{ mount(); }catch(e){}
+})();
+</script>
+<!-- Cardápio Modal (fallback se não existir) -->
+<div id="cardapio-modal" class="cpio-modal" style="display:none">
+  <div class="cpio-dialog">
+    <div class="cpio-header">
+      <strong>Cardápio</strong>
+      <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="cpio-body">
+      <div class="cpio-toolbar">
+        <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
+        <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
+        <button id="cpio-add-item" class="cpio-btn">+ Item</button>
+      </div>
+      <div class="cpio-grid">
+        <section class="cpio-panel">
+          <div class="cpio-muted">Categorias</div>
+          <div id="cpio-cats" class="cpio-cats"></div>
+        </section>
+        <section class="cpio-panel">
+          <div class="cpio-muted">Itens</div>
+          <div id="cpio-items" class="cpio-items"></div>
+          <div id="cpio-empty" class="cpio-empty" style="display:none">Nenhum item.</div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const modal = document.getElementById('cardapio-modal');
+  if (!modal) return;
+  function hide(){ modal.style.display='none'; document.body.style.overflow=''; }
+  modal.addEventListener('click', (e)=>{ if(e.target===modal) hide(); });
+  var x = modal.querySelector('.cpio-close');
+  if (x) x.addEventListener('click', hide);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') hide(); });
+})();
+</script>
+<style>
+.cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
+.cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
+.cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
+.cpio-close{background:transparent;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e5e7eb;cursor:pointer}
+.cpio-body{padding:12px}
+.cpio-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cpio-panel{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px}
+.cpio-grid{display:grid;grid-template-columns:260px 1fr;gap:12px}
+#cpio-q{flex:1;min-width:220px;padding:8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
+.cpio-cats{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+.cpio-cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
+.cpio-cat.active{outline:2px solid #2563eb}
+.cpio-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.cpio-card{border:1px solid #1f2937;border-radius:10px;background:#0b1020;padding:10px;display:flex;flex-direction:column;gap:6px}
+.cpio-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.cpio-pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
+.cpio-pill.ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
+.cpio-pill.off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
+.cpio-price{font-weight:700}
+.cpio-empty{padding:24px;text-align:center;color:#94a3b8}
+.cpio-muted{color:#94a3b8;font-size:12px}
+@media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
+</style>
 </body>
 </html>
 <!-- header-brand (branding) -->
@@ -234,6 +331,7 @@ body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
   }, 250);
 })();
 </script>
+
 
 
 
