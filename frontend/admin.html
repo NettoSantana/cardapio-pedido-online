@@ -153,41 +153,7 @@ body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
   new MutationObserver(tick).observe(document.body, {childList:true, subtree:true});
 })();
 </script>
-<script id="cardapio-button-inject">
-(function(){
-  function openModal(ev){
-    if (ev) ev.preventDefault();
-    var m = document.getElementById('cardapio-modal');
-    if (m){
-      m.style.display = 'block';
-      document.body.style.overflow = 'hidden';
-      try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(e){}
-    }
-  }
-  function mount(){
-    // acha a appbar por seletor amplo
-    var bar = document.querySelector('#admin-appbar, .appbar, header, .topbar, [data-appbar]');
-    if (!bar) return;
-    // evita duplicar
-    if (document.getElementById('btn-cardapio')) return;
-    // cria o botão (não <a>)
-    var btn = document.createElement('button');
-    btn.id = 'btn-cardapio';
-    btn.type = 'button';
-    btn.textContent = 'Cardápio';
-    btn.className = 'btn btn-primary';
-    btn.style.marginLeft = '8px';
-    btn.addEventListener('click', openModal, true);
-    // adiciona no final da appbar
-    bar.appendChild(btn);
-  }
-  // Observa mudanças para recolocar o botão se a UI for recriada
-  new MutationObserver(mount).observe(document.body, {childList:true, subtree:true});
-  document.addEventListener('DOMContentLoaded', mount);
-  // roda já
-  try{ mount(); }catch(e){}
-})();
-</script>
+
 <!-- Cardápio Modal (fallback se não existir) -->
 <div id="cardapio-modal" class="cpio-modal" style="display:none">
   <div class="cpio-dialog">
@@ -250,6 +216,57 @@ body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
 .cpio-muted{color:#94a3b8;font-size:12px}
 @media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
 </style>
+<style id="cpio-fab-css">
+  #cpio-fab{position:fixed;right:18px;bottom:18px;z-index:10000}
+  #cpio-fab button{
+    padding:10px 14px;border-radius:9999px;border:1px solid #334155;
+    background:#0d6efd;color:#fff;cursor:pointer;font-weight:600;
+    box-shadow:0 6px 18px rgba(0,0,0,.25)
+  }
+  #cpio-fab button:hover{filter:brightness(1.05)}
+</style>
+<div id="cpio-fab" hidden>
+  <button type="button" id="cpio-fab-btn">Cardápio</button>
+</div>
+<script id="cpio-fab-inject">
+(function(){
+  function ensureFab(){
+    var fab = document.getElementById('cpio-fab');
+    if (!fab){
+      // se alguém deletar, recria
+      fab = document.createElement('div');
+      fab.id = 'cpio-fab';
+      fab.innerHTML = '<button type="button" id="cpio-fab-btn">Cardápio</button>';
+      document.body.appendChild(fab);
+    }
+    fab.hidden = false;
+    var btn = document.getElementById('cpio-fab-btn');
+    if (!btn.__cpioBound){
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        var m = document.getElementById('cardapio-modal');
+        if (m){
+          m.style.display = 'block';
+          document.body.style.overflow = 'hidden';
+          try{ window.dispatchEvent(new CustomEvent('cpio:open')); }catch(_){}
+        } else {
+          alert('Modal de Cardápio não encontrado na página.');
+        }
+      }, true);
+      btn.__cpioBound = true;
+    }
+  }
+  // Monta agora…
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ensureFab);
+  } else {
+    ensureFab();
+  }
+  // …e remonta se a SPA re-renderizar
+  new MutationObserver(function(){ ensureFab(); })
+    .observe(document.body, {childList:true, subtree:true});
+})();
+</script>
 </body>
 </html>
 <!-- header-brand (branding) -->
@@ -331,6 +348,7 @@ body > a#btn-cardapio[style*="display:none"]{display:inline-block!important}
   }, 250);
 })();
 </script>
+
 
 
 
