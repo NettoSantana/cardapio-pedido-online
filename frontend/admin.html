@@ -106,3 +106,46 @@
 
 
 
+
+<script id="ensure-cardapio-btn">
+(function(){
+  function ensure(){
+    if (!window.openCardapioModal) return; // espera o modal expor a função
+    // tenta achar uma área de abas/toolbar do admin
+    var bar = document.querySelector('.admin-tabs') 
+           || document.querySelector('#admin-appbar')
+           || document.querySelector('header')
+           || document.body;
+    if (!bar) return;
+    // evita duplicar
+    if (document.getElementById('btn-cardapio-open')) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'btn-cardapio-open';
+    btn.type = 'button';
+    // classes compatíveis com o visual existente (ajuste se quiser)
+    btn.className = 'admin-tab';
+    btn.textContent = 'Cardápio';
+    btn.onclick = function(ev){ ev.preventDefault(); window.openCardapioModal(); };
+
+    // se tiver .admin-tabs, insere lá; senão, no header
+    if (bar.classList && bar.classList.contains('admin-tabs')) {
+      bar.appendChild(btn);
+    } else {
+      // tenta colocar do lado do <h1> se existir
+      var h1 = bar.querySelector('h1');
+      if (h1 && h1.parentNode) {
+        h1.parentNode.insertBefore(btn, h1.nextSibling);
+      } else {
+        bar.appendChild(btn);
+      }
+    }
+  }
+  // tenta algumas vezes pq o SPA monta o header depois
+  var tries = 0, timer = setInterval(function(){
+    tries++;
+    try { ensure(); } catch(e){}
+    if (document.getElementById('btn-cardapio-open') || tries > 40) clearInterval(timer);
+  }, 250);
+})();
+</script>
