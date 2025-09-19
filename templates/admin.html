@@ -1,504 +1,223 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin • Bar do Netto</title>
   <link rel="stylesheet" href="css/admin-spa.css">
-  <script>
-  (function(){
-    function nukeTopAnchors(){
-      var bar = document.getElementById('admin-appbar');
-      if (!bar) return;
-      var body = document.body;
-      // remove até 3 <a> diretos no início do body (breadcrumbs antigos)
-      for (var i=0; i<3; i++){
-        var a = body.querySelector('body > a');
-        if (!a) break;
-        // só remove se estiver acima da appbar
-        var br = bar.getBoundingClientRect();
-        var ar = a.getBoundingClientRect();
-        if (ar.top < br.top) { a.remove(); } else { break; }
-      }
-    }
-    document.addEventListener('DOMContentLoaded', nukeTopAnchors);
-    new MutationObserver(nukeTopAnchors).observe(document.documentElement, {childList:true, subtree:true});
-  })();
-  </script>
-  <script id="nuke-top-links">
-  (function(){
-    // tenta reconhecer a appbar por vários seletores comuns
-    function getAppbar(){
-      return document.querySelector('#admin-appbar, .appbar, [data-appbar]');
-    }
-    function nukeBeforeAppbar(){
-      var bar = getAppbar();
-      if (!bar) return;
-      var body = document.body;
-      // enquanto o primeiro filho do body NÃO for a appbar, remove-o
-      while (body.firstElementChild && body.firstElementChild !== bar){
-        body.firstElementChild.remove();
-      }
-      // se por algum motivo a appbar não for o primeiro, mas existir algo antes dela, remove tudo até ela
-      if (bar && bar.previousElementSibling){
-        var node = bar.previousElementSibling;
-        while(node){
-          var prev = node.previousElementSibling;
-          node.remove();
-          node = prev;
-        }
-      }
-    }
-    document.addEventListener('DOMContentLoaded', nukeBeforeAppbar);
-    new MutationObserver(nukeBeforeAppbar).observe(document.body, {childList:true, subtree:false});
-  })();
-  </script>
-  
-  <script id="purge-preheader">
-  (function(){
-    function nukeBeforeFirstHeader(){
-      var body = document.body;
-      var header = document.querySelector('header');
-      if (!body) return;
 
-      // 1) apaga tudo que vier antes do primeiro <header>
-      if (header){
-        while (body.firstElementChild && body.firstElementChild !== header){
-          body.firstElementChild.remove();
-        }
-        var n = header.previousElementSibling;
-        while(n){ var prev = n.previousElementSibling; n.remove(); n = prev; }
-      }
-
-      function looksLikeBad(el){
-        var t = (el.textContent||"").trim().replace(/\s+/g,' ');
-      }
-      Array.from(document.body.children).forEach(function(el){
-        if (el.tagName && el.tagName.toLowerCase()!=='header' && looksLikeBad(el)) el.remove();
-      });
-    }
-    document.addEventListener('DOMContentLoaded', nukeBeforeFirstHeader);
-    new MutationObserver(nukeBeforeFirstHeader).observe(document.body, {childList:true});
-  })();
-  </script>
-  <!-- KILL-TOP-LINKS -->
   <style>
-    /* Esconde os 3 primeiros <a> soltos no topo do <body> (os indesejados) */
-    body > a:nth-of-type(1),
-    body > a:nth-of-type(2),
-    body > a:nth-of-type(3) { display:none !important; }
+    /* --------- Cardápio (Modal) --------- */
+    .cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
+    .cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
+    .cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
+    .cpio-close{background:transparent;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e5e7eb;cursor:pointer}
+    .cpio-body{padding:12px}
+    .cpio-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .cpio-panel{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px}
+    .cpio-grid{display:grid;grid-template-columns:260px 1fr;gap:12px}
+    #cpio-q{flex:1;min-width:220px;padding:8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
+    .cpio-cats{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+    .cpio-cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
+    .cpio-cat.active{outline:2px solid #2563eb}
+    .cpio-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .cpio-card{border:1px solid #1f2937;border-radius:10px;background:#0b1020;padding:10px;display:flex;flex-direction:column;gap:6px}
+    .cpio-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .cpio-pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
+    .cpio-pill.ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
+    .cpio-pill.off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
+    .cpio-price{font-weight:700}
+    .cpio-empty{padding:24px;text-align:center;color:#94a3b8}
+    .cpio-muted{color:#94a3b8;font-size:12px}
+    @media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
 
-    /* Se alguém embrulhou em um contêiner textual antes do header, some também */
-    body > div:first-of-type > a[href], 
-    body > p:first-of-type > a[href] { display:none !important; }
+    /* --------- FAB (botão fixo Cardápio) --------- */
+    #cpio-fab{position:fixed;right:16px;bottom:16px;z-index:9998}
+    #cpio-fab button{
+      padding:10px 14px;border-radius:9999px;border:1px solid #1f2937;
+      background:linear-gradient(180deg,#1f51ff,#0ea5e9);color:#fff;font-weight:600;
+      box-shadow:0 8px 24px rgba(0,0,0,.2); cursor:pointer
+    }
+    #cpio-fab button:active{transform:translateY(1px)}
   </style>
-<style id="tabs-pill-css">
-  /* Tabs no estilo do botão Chamados (pílula) */
-  .admin-tabs{ margin-left:12px; display:inline-flex; gap:10px; vertical-align:middle }
-
-  /* força cor/fundo/borda nos links */
-  .admin-tabs .admin-tab,
-  .admin-tabs .admin-tab:link,
-  .admin-tabs .admin-tab:visited{
-    display:inline-block;
-    padding:6px 12px;
-    border-radius:9999px;
-    border:1px solid #d0d7de !important;
-    background:#ffffff !important;
-    color:#0d6efd !important;
-    font-weight:600;
-    text-decoration:none !important;
-    line-height:1;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.02);
-  }
-
-  .admin-tabs .admin-tab:hover{
-    background:#f3f6ff !important;
-    text-decoration:none !important;
-  }
-
-  .admin-tabs .admin-tab.active,
-  .admin-tabs .admin-tab.active:link,
-  .admin-tabs .admin-tab.active:visited{
-    background:#0d6efd !important;
-    border-color:#0d6efd !important;
-    color:#ffffff !important;
-  }
-
-  /* garante alinhamento do título + abas + badge */
-  .topbar h1, header h1, .header h1, .appbar h1, h1{
-    display:inline-block; vertical-align:middle;
-  }
-</style>
 </head>
 <body>
+  <!-- SPA container -->
   <div id="app-admin"></div>
+
+  <!-- scripts do admin (somente os necessários) -->
   <script src="js/admin-spa.js"></script>
-<script src="js/admin-tabs-inline.js?v=20250916160230"></script><script src="js/admin-tabs-inline2.js?v=20250916161217"></script>  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
+  <script src="js/admin-tabs-inline3.js?v=20250916220851"></script>
   <script src="js/admin-menu-editor.js?v=20250916210846"></script>
-</body>
-</html>
-<!-- header-brand (branding) -->
-<div class="header-brand">
-  <img src="img/logo.png" alt="Logo" onerror="this.style.display=\"none\"">
-  <div class="title">Bar do Netto</div>
-</div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- Cardápio Modal START -->
-<div id="cardapio-modal" class="cpio-modal" style="display:none">
-  <div class="cpio-dialog">
-    <div class="cpio-header">
-      <strong>Cardápio</strong>
-      <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
-    </div>
-    <div class="cpio-body">
-      <div class="cpio-toolbar">
-        <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
-        <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
-        <button id="cpio-add-item" class="cpio-btn">+ Item</button>
+  <!-- Cardápio Modal (ÚNICO) -->
+  <div id="cardapio-modal" class="cpio-modal" aria-hidden="true">
+    <div class="cpio-dialog" role="dialog" aria-modal="true" aria-label="Cardápio">
+      <div class="cpio-header">
+        <strong>Cardápio</strong>
+        <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
       </div>
-      <div class="cpio-grid">
-        <section class="cpio-panel">
-          <div class="cpio-muted">Categorias</div>
-          <div id="cpio-cats" class="cpio-cats"></div>
-        </section>
-        <section class="cpio-panel">
-          <div class="cpio-muted">Itens</div>
-          <div id="cpio-items" class="cpio-items"></div>
-          <div id="cpio-empty" class="cpio-empty" style="display:none">Nenhum item.</div>
-        </section>
+      <div class="cpio-body">
+        <div class="cpio-toolbar">
+          <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
+          <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
+          <button id="cpio-add-item" class="cpio-btn">+ Item</button>
+        </div>
+        <div class="cpio-grid">
+          <section class="cpio-panel">
+            <div class="cpio-muted">Categorias</div>
+            <div id="cpio-cats" class="cpio-cats"></div>
+          </section>
+          <section class="cpio-panel">
+            <div class="cpio-muted">Itens</div>
+            <div id="cpio-items" class="cpio-items"></div>
+            <div id="cpio-empty" class="cpio-empty" style="display:none">Nenhum item.</div>
+          </section>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-(() => {
-  const modal = document.getElementById('cardapio-modal');
-  const byText = (t) => Array.from(document.querySelectorAll('button,a'))
-    .find(el => el.textContent.trim().toLowerCase() === t);
-  const openBtn = byText('cardápio') || byText('cardapio');
+  <script>
+  (()=>{
+    // ---------- estado ----------
+    const state = { slug: new URLSearchParams(location.search).get('slug') || '', menu: null, catId: null, q:'' };
 
-  let state = { slug: new URLSearchParams(location.search).get('slug') || '', menu: null, catId: null, q:'' };
-
-  function show() { modal.style.display = 'block'; document.body.style.overflow='hidden'; }
-  function hide() { modal.style.display = 'none'; document.body.style.overflow=''; }
-  function onEsc(e){ if(e.key==='Escape'){ hide(); document.removeEventListener('keydown', onEsc); } }
-
-  if (openBtn) {
-    openBtn.addEventListener('click', (ev) => {
-      ev.preventDefault();
-      show();
-      document.addEventListener('keydown', onEsc);
-      if (!state.menu) loadMenu().catch(console.error);
-    });
-  }
-  modal.addEventListener('click', (e)=>{ if(e.target === modal) hide(); });
-  modal.querySelector('.cpio-close').addEventListener('click', hide);
-
-  async function fetchJSON(url, opts={}) {
-    const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
-  }
-
-  async function loadMenu() {
-    const url = '/api/menu' + (state.slug ? ('?slug='+encodeURIComponent(state.slug)) : '');
-    state.menu = await fetchJSON(url);
-    if (!state.catId) {
-      const first = (state.menu.categories||[]).find(c=>c.active!==false);
-      state.catId = first ? first.id : null;
+    // ---------- util ----------
+    const $  = (sel,root=document)=> root.querySelector(sel);
+    const $$ = (sel,root=document)=> Array.from(root.querySelectorAll(sel));
+    async function fetchJSON(url, opts={}) {
+      const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
     }
-    renderCats(); renderItems();
-  }
 
-  const catsEl  = () => document.getElementById('cpio-cats');
-  const itemsEl = () => document.getElementById('cpio-items');
-  const emptyEl = () => document.getElementById('cpio-empty');
+    // ---------- modal ----------
+    const modal   = $('#cardapio-modal');
+    const dlg     = $('.cpio-dialog', modal);
+    const closeBt = $('.cpio-close', modal);
 
-  function renderCats() {
-    const el = catsEl(); el.innerHTML = '';
-    (state.menu.categories||[])
-      .sort((a,b)=>(a.order||0)-(b.order||0))
-      .forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'cpio-cat' + (state.catId===c.id?' active':'');
-        div.innerHTML = '<div>'+ (c.name||'') +'</div><div class="cpio-muted">#'+c.id+'</div>';
-        div.onclick = () => { state.catId = c.id; renderCats(); renderItems(); };
-        el.appendChild(div);
+    function show(){ modal.style.display='block'; modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+    function hide(){ modal.style.display='none';  modal.setAttribute('aria-hidden','true');  document.body.style.overflow=''; }
+    function onEsc(e){ if(e.key==='Escape'){ hide(); document.removeEventListener('keydown', onEsc); } }
+
+    modal.addEventListener('click', e => { if (e.target === modal) hide(); });
+    closeBt.addEventListener('click', hide);
+
+    // ---------- dados ----------
+    async function loadMenu() {
+      const url = '/api/menu' + (state.slug ? ('?slug='+encodeURIComponent(state.slug)) : '');
+      state.menu = await fetchJSON(url);
+      if (!state.catId) {
+        const first = (state.menu.categories||[]).find(c=>c.active!==false);
+        state.catId = first ? first.id : null;
+      }
+      renderCats(); renderItems();
+    }
+
+    // ---------- render ----------
+    const catsEl  = () => $('#cpio-cats');
+    const itemsEl = () => $('#cpio-items');
+    const emptyEl = () => $('#cpio-empty');
+
+    function renderCats() {
+      const el = catsEl(); el.innerHTML = '';
+      (state.menu.categories||[])
+        .sort((a,b)=>(a.order||0)-(b.order||0))
+        .forEach(c => {
+          const div = document.createElement('div');
+          div.className = 'cpio-cat' + (state.catId===c.id?' active':'');
+          div.innerHTML = '<div>'+ (c.name||'') +'</div><div class="cpio-muted">#'+c.id+'</div>';
+          div.onclick = () => { state.catId = c.id; renderCats(); renderItems(); };
+          el.appendChild(div);
+        });
+    }
+    function matchesQuery(item){
+      if (!state.q) return true;
+      const q=state.q.toLowerCase();
+      return (item.name||'').toLowerCase().includes(q) || (item.desc||'').toLowerCase().includes(q);
+    }
+    function renderItems(){
+      const iel = itemsEl(); iel.innerHTML = '';
+      let items = [];
+      (state.menu.categories||[]).forEach(c=>{
+        if (state.catId && c.id!==state.catId) return;
+        (c.items||[]).forEach(i=>items.push(Object.assign({_cat:c}, i)));
       });
-  }
+      items = items.filter(matchesQuery);
+      emptyEl().style.display = items.length? 'none':'block';
+      items.forEach(it=>{
+        const div = document.createElement('div');
+        div.className = 'cpio-card';
+        div.innerHTML = `
+          <div class="cpio-row">
+            <div style="font-weight:600">${it.name||''}</div>
+            <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indisponível'}</div>
+          </div>
+          <div class="cpio-muted">${it.desc||''}</div>
+          <div class="cpio-row">
+            <div class="cpio-price">R$ ${Number(it.price||0).toFixed(2)}</div>
+            <div class="cpio-muted">Cat: ${it._cat?.name||''}</div>
+          </div>
+          <div class="cpio-row" style="margin-top:6px">
+            <button class="cpio-btn" data-edit="${it.id}">Editar</button>
+            <button class="cpio-btn" data-del="${it.id}">Excluir</button>
+          </div>`;
+        iel.appendChild(div);
+      });
+      // placeholders
+      $$('#cpio-items [data-edit]').forEach(b=>b.onclick=()=>alert('editar '+b.dataset.edit));
+      $$('#cpio-items [data-del]').forEach(b=>b.onclick=()=>alert('excluir '+b.dataset.del));
+    }
 
-  function matchesQuery(item){
-    if (!state.q) return true;
-    const q=state.q.toLowerCase();
-    return (item.name||'').toLowerCase().includes(q) || (item.desc||'').toLowerCase().includes(q);
-  }
-
-  function renderItems(){
-    const iel = itemsEl(); iel.innerHTML = '';
-    let items = [];
-    (state.menu.categories||[]).forEach(c=>{
-      if (state.catId && c.id!==state.catId) return;
-      (c.items||[]).forEach(i=>items.push(Object.assign({_cat:c}, i)));
+    // ---------- busca ----------
+    document.addEventListener('input', (e)=>{
+      if (e.target && e.target.id === 'cpio-q') { state.q = e.target.value; renderItems(); }
     });
-    items = items.filter(matchesQuery);
-    emptyEl().style.display = items.length? 'none':'block';
-    items.forEach(it=>{
-      const div = document.createElement('div');
-      div.className = 'cpio-card';
-      div.innerHTML = `
-        <div class="cpio-row">
-          <div style="font-weight:600">${it.name||''}</div>
-          <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indisponível'}</div>
-        </div>
-        <div class="cpio-muted">${it.desc||''}</div>
-        <div class="cpio-row">
-          <div class="cpio-price">R$ ${Number(it.price||0).toFixed(2)}</div>
-          <div class="cpio-muted">Cat: ${it._cat?.name||''}</div>
-        </div>
-        <div class="cpio-row" style="margin-top:6px">
-          <button class="cpio-btn" data-edit="${it.id}">Editar</button>
-          <button class="cpio-btn" data-del="${it.id}">Excluir</button>
-        </div>`;
-      iel.appendChild(div);
-    });
-    // placeholders
-    iel.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>alert('editar '+b.dataset.edit));
-    iel.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>alert('excluir '+b.dataset.del));
-  }
 
-  document.addEventListener('input', (e)=>{
-    if (e.target && e.target.id === 'cpio-q') { state.q = e.target.value; renderItems(); }
-  });
-})();
-</script>
-
-<style>
-.cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
-.cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
-.cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
-.cpio-close{background:transparent;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e5e7eb;cursor:pointer}
-.cpio-body{padding:12px}
-.cpio-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.cpio-panel{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px}
-.cpio-grid{display:grid;grid-template-columns:260px 1fr;gap:12px}
-#cpio-q{flex:1;min-width:220px;padding:8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
-.cpio-cats{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
-.cpio-cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
-.cpio-cat.active{outline:2px solid #2563eb}
-.cpio-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-.cpio-card{border:1px solid #1f2937;border-radius:10px;background:#0b1020;padding:10px;display:flex;flex-direction:column;gap:6px}
-.cpio-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.cpio-pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
-.cpio-pill.ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
-.cpio-pill.off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
-.cpio-price{font-weight:700}
-.cpio-empty{padding:24px;text-align:center;color:#94a3b8}
-.cpio-muted{color:#94a3b8;font-size:12px}
-@media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
-</style>
-<!-- Cardápio Modal END -->
-<!-- Cardápio Modal START -->
-<div id="cardapio-modal" class="cpio-modal" style="display:none">
-  <div class="cpio-dialog">
-    <div class="cpio-header">
-      <strong>Cardápio</strong>
-      <button type="button" class="cpio-close" aria-label="Fechar">&times;</button>
-    </div>
-    <div class="cpio-body">
-      <div class="cpio-toolbar">
-        <input id="cpio-q" placeholder="Buscar por nome ou descrição" />
-        <button id="cpio-add-cat" class="cpio-btn">+ Categoria</button>
-        <button id="cpio-add-item" class="cpio-btn">+ Item</button>
-      </div>
-      <div class="cpio-grid">
-        <section class="cpio-panel">
-          <div class="cpio-muted">Categorias</div>
-          <div id="cpio-cats" class="cpio-cats"></div>
-        </section>
-        <section class="cpio-panel">
-          <div class="cpio-muted">Itens</div>
-          <div id="cpio-items" class="cpio-items"></div>
-          <div id="cpio-empty" class="cpio-empty" style="display:none">Nenhum item.</div>
-        </section>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-(() => {
-  const modal = document.getElementById('cardapio-modal');
-  let state = { slug: new URLSearchParams(location.search).get('slug') || '', menu: null, catId: null, q:'' };
-
-  function show() { modal.style.display = 'block'; document.body.style.overflow='hidden'; }
-  function hide() { modal.style.display = 'none'; document.body.style.overflow=''; }
-  function onEsc(e){ if(e.key==='Escape'){ hide(); document.removeEventListener('keydown', onEsc); } }
-
-  // 1) Tenta achar o botão/anchor com texto "Cardápio" (tolerante)
-  function findOpenBtn(){
-    const nodes = Array.from(document.querySelectorAll('button,a,[role="button"],.btn'));
-    return nodes.find(el => /card[aá]pio/i.test((el.textContent||'').trim()));
-  }
-
-  // 2) Liga no botão se existir; se não, usa delegação global de clique
-  function wireOpen(){
-    const btn = findOpenBtn();
-    const open = (ev) => {
+    // ---------- acionadores ----------
+    function findOpenBtn(){
+      // tenta achar um botão/aba existente chamado "Cardápio"
+      const nodes = Array.from(document.querySelectorAll('button,a,[role="button"],.btn'));
+      return nodes.find(el => /card[aá]pio/i.test((el.textContent||'').trim()));
+    }
+    function ensureFab(){
+      if (document.getElementById('cpio-fab')) return;
+      const wrap = document.createElement('div');
+      wrap.id = 'cpio-fab';
+      wrap.innerHTML = '<button type="button" aria-label="Abrir Cardápio">Cardápio</button>';
+      document.body.appendChild(wrap);
+      return $('button', wrap);
+    }
+    function openHandler(ev){
       if (ev) ev.preventDefault();
       show();
       document.addEventListener('keydown', onEsc);
       if (!state.menu) loadMenu().catch(console.error);
-    };
-    if (btn) btn.addEventListener('click', open);
-    // delegação: qualquer clique cujo alvo tenha texto "Cardápio"
-    document.addEventListener('click', (e)=>{
-      const t = e.target;
-      if (!t) return;
-      const txt = (t.textContent||'').trim();
-      if (/card[aá]pio/i.test(txt)) { open(e); }
-    }, true);
-  }
-
-  modal.addEventListener('click', (e)=>{ if(e.target === modal) hide(); });
-  modal.querySelector('.cpio-close').addEventListener('click', hide);
-
-  async function fetchJSON(url, opts={}) {
-    const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
-    if (!r.ok) throw new Error(await r.text());
-    return r.json();
-  }
-
-  async function loadMenu() {
-    const url = '/api/menu' + (state.slug ? ('?slug='+encodeURIComponent(state.slug)) : '');
-    state.menu = await fetchJSON(url);
-    if (!state.catId) {
-      const first = (state.menu.categories||[]).find(c=>c.active!==false);
-      state.catId = first ? first.id : null;
     }
-    renderCats(); renderItems();
-  }
 
-  const catsEl  = () => document.getElementById('cpio-cats');
-  const itemsEl = () => document.getElementById('cpio-items');
-  const emptyEl = () => document.getElementById('cpio-empty');
+    function wireOpen(){
+      const btn = findOpenBtn();
+      let trigger = btn;
+      if (!trigger) { trigger = ensureFab(); }
+      if (trigger) trigger.addEventListener('click', openHandler, {passive:false});
 
-  function renderCats() {
-    const el = catsEl(); el.innerHTML = '';
-    (state.menu.categories||[])
-      .sort((a,b)=>(a.order||0)-(b.order||0))
-      .forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'cpio-cat' + (state.catId===c.id?' active':'');
-        div.innerHTML = '<div>'+ (c.name||'') +'</div><div class="cpio-muted">#'+c.id+'</div>';
-        div.onclick = () => { state.catId = c.id; renderCats(); renderItems(); };
-        el.appendChild(div);
-      });
-  }
+      // Delegação defensiva (se o UI recriar o botão depois)
+      document.addEventListener('click', (e)=>{
+        const t = e.target;
+        if (!t) return;
+        const txt = (t.textContent||'').trim();
+        if (/card[aá]pio/i.test(txt)) { openHandler(e); }
+      }, true);
+    }
 
-  function matchesQuery(item){
-    if (!state.q) return true;
-    const q=state.q.toLowerCase();
-    return (item.name||'').toLowerCase().includes(q) || (item.desc||'').toLowerCase().includes(q);
-  }
-
-  function renderItems(){
-    const iel = itemsEl(); iel.innerHTML = '';
-    let items = [];
-    (state.menu.categories||[]).forEach(c=>{
-      if (state.catId && c.id!==state.catId) return;
-      (c.items||[]).forEach(i=>items.push(Object.assign({_cat:c}, i)));
-    });
-    items = items.filter(matchesQuery);
-    emptyEl().style.display = items.length? 'none':'block';
-    items.forEach(it=>{
-      const div = document.createElement('div');
-      div.className = 'cpio-card';
-      div.innerHTML = `
-        <div class="cpio-row">
-          <div style="font-weight:600">${it.name||''}</div>
-          <div class="cpio-pill ${it.available!==false?'ok':'off'}">${it.available!==false?'Ativo':'Indisponível'}</div>
-        </div>
-        <div class="cpio-muted">${it.desc||''}</div>
-        <div class="cpio-row">
-          <div class="cpio-price">R$ ${Number(it.price||0).toFixed(2)}</div>
-          <div class="cpio-muted">Cat: ${it._cat?.name||''}</div>
-        </div>
-        <div class="cpio-row" style="margin-top:6px">
-          <button class="cpio-btn" data-edit="${it.id}">Editar</button>
-          <button class="cpio-btn" data-del="${it.id}">Excluir</button>
-        </div>`;
-      iel.appendChild(div);
-    });
-    // placeholders
-    iel.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>alert('editar '+b.dataset.edit));
-    iel.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>alert('excluir '+b.dataset.del));
-  }
-
-  document.addEventListener('input', (e)=>{
-    if (e.target && e.target.id === 'cpio-q') { state.q = e.target.value; renderItems(); }
-  });
-
-  // garante que a DOM existe antes de procurar botões
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wireOpen);
-  } else {
-    wireOpen();
-  }
-})();
-</script>
-
-<style>
-.cpio-modal{position:fixed;inset:0;background:#0009;display:none;z-index:9999}
-.cpio-dialog{position:relative;margin:4vh auto;max-width:1100px;background:#0b1220;border:1px solid #1f2937;border-radius:12px;overflow:hidden}
-.cpio-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2937;background:#0b1220cc;backdrop-filter:blur(6px)}
-.cpio-close{background:transparent;border:1px solid #334155;border-radius:6px;padding:4px 8px;color:#e5e7eb;cursor:pointer}
-.cpio-body{padding:12px}
-.cpio-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.cpio-panel{background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:10px}
-.cpio-grid{display:grid;grid-template-columns:260px 1fr;gap:12px}
-#cpio-q{flex:1;min-width:220px;padding:8px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
-.cpio-cats{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
-.cpio-cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
-.cpio-cat.active{outline:2px solid #2563eb}
-.cpio-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
-.cpio-card{border:1px solid #1f2937;border-radius:10px;background:#0b1020;padding:10px;display:flex;flex-direction:column;gap:6px}
-.cpio-row{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.cpio-pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
-.cpio-pill.ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
-.cpio-pill.off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
-.cpio-price{font-weight:700}
-.cpio-empty{padding:24px;text-align:center;color:#94a3b8}
-.cpio-muted{color:#94a3b8;font-size:12px}
-@media (max-width: 720px){ .cpio-grid{grid-template-columns:1fr} }
-</style>
-<!-- Cardápio Modal END -->
+    // inicializa
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', wireOpen);
+    } else {
+      wireOpen();
+    }
+  })();
+  </script>
+</body>
+</html>
