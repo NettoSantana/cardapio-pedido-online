@@ -747,6 +747,11 @@ def deliver_item(order_id:int, item_id:int):
     return jsonify({"ok": True, "order": order, "delivered_item": {"id": item_id, "delivered_now": deliver_now, "remaining": qty_total - item["delivered_qty"]}})
 
 # ===== MAIN =====
+@app.get("/cardapio")
+@require_admin
+def cardapio_page():
+    return render_template("cardapio.html")
 if __name__ == "__main__":
     os.makedirs(DATA_DIR, exist_ok=True)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+

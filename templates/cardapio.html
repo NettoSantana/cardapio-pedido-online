@@ -1,0 +1,155 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cardápio — Admin</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#2563eb; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; }
+    *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b1220,#000);color:#e5e7eb;font-family:system-ui,Segoe UI,Roboto,Arial}
+    header{position:sticky;top:0;background:#0b1220aa;backdrop-filter:blur(6px);border-bottom:1px solid #1f2937;padding:10px 16px;display:flex;gap:8px;align-items:center}
+    header a{color:#e5e7eb;text-decoration:none}
+    .btn{padding:8px 12px;border:1px solid #374151;border-radius:8px;background:#111827;cursor:pointer}
+    .btn:hover{filter:brightness(1.1)}
+    .btn.primary{background:linear-gradient(180deg,#1f51ff,#0ea5e9);border:0;color:#fff}
+    main{max-width:1100px;margin:18px auto;padding:0 16px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .grid{display:grid;grid-template-columns:260px 1fr;gap:16px}
+    .panel{background:#0b1220;border:1px solid #1f2937;border-radius:12px;padding:12px}
+    .search{width:100%;padding:10px;border:1px solid #334155;border-radius:8px;background:#0b1220;color:#e5e7eb}
+    .cats{display:flex;flex-direction:column;gap:6px;max-height:70vh;overflow:auto}
+    .cat{display:flex;justify-content:space-between;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:8px;background:#0b1020;cursor:pointer}
+    .cat.active{outline:2px solid #2563eb}
+    .items{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+    .card{border:1px solid #1f2937;border-radius:12px;background:#0b1020;padding:12px;display:flex;flex-direction:column;gap:6px}
+    .muted{color:#94a3b8;font-size:12px}
+    .row{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .pill{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid #334155}
+    .ok{color:#22c55e;border-color:#22c55e22;background:#22c55e0d}
+    .off{color:#ef4444;border-color:#ef444422;background:#ef44440d}
+    .price{font-weight:700}
+    .empty{padding:24px;text-align:center;color:#94a3b8}
+    .footer-note{margin-top:10px;color:#94a3b8;font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/admin" class="btn">← Voltar</a>
+    <strong style="margin-left:6px">Cardápio</strong>
+    <div style="flex:1"></div>
+    <button id="btn-publish" class="btn primary">Publicar</button>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <input id="q" class="search" placeholder="Buscar por nome ou descrição…" />
+      <button id="btn-add-cat" class="btn">+ Categoria</button>
+      <button id="btn-add-item" class="btn">+ Item</button>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="muted" style="margin-bottom:6px">Categorias</div>
+        <div id="cats" class="cats"></div>
+      </section>
+
+      <section class="panel">
+        <div class="muted" style="margin-bottom:8px">Itens</div>
+        <div id="items" class="items"></div>
+        <div id="empty" class="empty" style="display:none">Nenhum item.</div>
+      </section>
+    </div>
+    <div class="footer-note muted">Dica: clique numa categoria para filtrar os itens.</div>
+  </main>
+
+<script>
+(() => {
+  const $ = sel => document.querySelector(sel);
+  const catsEl = #cats;
+  const itemsEl = #items;
+  const emptyEl = #empty;
+  const searchEl = #q;
+
+  let state = { slug: new URLSearchParams(location.search).get('slug') || '', menu: null, catId: null, q:'' };
+
+  async function fetchJSON(url, opts={}) {
+    const r = await fetch(url, { headers:{'Content-Type':'application/json'}, ...opts });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function loadMenu() {
+    const url = '/api/menu' + (state.slug ? ('?slug='+encodeURIComponent(state.slug)) : '');
+    state.menu = await fetchJSON(url);
+    if (!state.catId) {
+      const first = (state.menu.categories||[]).find(c=>c.active!==false);
+      state.catId = first ? first.id : null;
+    }
+    renderCats(); renderItems();
+  }
+
+  function renderCats() {
+    catsEl.innerHTML = '';
+    (state.menu.categories||[])
+      .sort((a,b)=>(a.order||0)-(b.order||0))
+      .forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'cat' + (state.catId===c.id?' active':'');
+        div.innerHTML = <div></div>
+                         <div class="muted">#</div>;
+        div.onclick = () => { state.catId = c.id; renderCats(); renderItems(); };
+        catsEl.appendChild(div);
+      });
+  }
+
+  function matchesQuery(item){
+    if (!state.q) return true;
+    const q=state.q.toLowerCase();
+    return (item.name||'').toLowerCase().includes(q) || (item.desc||'').toLowerCase().includes(q);
+  }
+
+  function renderItems(){
+    itemsEl.innerHTML = '';
+    let items = [];
+    (state.menu.categories||[]).forEach(c=>{
+      if (state.catId && c.id!==state.catId) return;
+      (c.items||[]).forEach(i=>items.push({...i, _cat:c}));
+    });
+    items = items.filter(matchesQuery);
+
+    emptyEl.style.display = items.length? 'none':'block';
+    items.forEach(it=>{
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = 
+        <div class="row">
+          <div style="font-weight:600"></div>
+          <div class="pill "></div>
+        </div>
+        <div class="muted"></div>
+        <div class="row">
+          <div class="price">R$ </div>
+          <div class="muted">Cat: </div>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button class="btn" data-edit="">Editar</button>
+          <button class="btn" data-del="">Excluir</button>
+        </div>;
+      itemsEl.appendChild(div);
+    });
+
+    itemsEl.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>alert('editar '+b.dataset.edit));
+    itemsEl.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>alert('excluir '+b.dataset.del));
+  }
+
+  searchEl.addEventListener('input', e=>{ state.q = e.target.value; renderItems(); });
+
+  document.getElementById('btn-publish').onclick = ()=> alert('Publicar — (vamos ligar isso depois)');
+  document.getElementById('btn-add-cat').onclick = ()=> alert('Nova categoria (vamos implementar)');
+  document.getElementById('btn-add-item').onclick = ()=> alert('Novo item (vamos implementar)');
+
+  loadMenu().catch(err=>{ console.error(err); alert('Falha ao carregar Cardápio'); });
+})();
+</script>
+</body>
+</html>
